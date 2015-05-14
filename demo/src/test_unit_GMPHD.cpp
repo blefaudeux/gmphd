@@ -1,6 +1,6 @@
 #include <cv.h>
 #include <highgui.h>
-#include <motion_filtering.h>
+#include "gmphd_filter.h"
 
 void draw(IplImage *image,
           const float *measurements,
@@ -12,37 +12,33 @@ void draw(IplImage *image,
 
     // Show the predicted motion vector (?)
     cvDrawLine(image, cvPoint(filtered_state[0],filtered_state[1]), cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
-  }
+}
 
 
 int main() {
 
-  // Deal with the OpenCV window..
-  float angle = CV_PI/2-0.03;
-  unsigned int width   = 800;
-  unsigned int height  = 800;
+    // Deal with the OpenCV window..
+    float angle = CV_PI/2-0.03;
+    unsigned int width   = 800;
+    unsigned int height  = 800;
 
-  int n_targets = 5;
+    int n_targets = 5;
 
-  // vector<vector<float[2]> > vec_poses;
-  // vec_poses.resize(5);
+    // vector<vector<float[2]> > vec_poses;
+    // vec_poses.resize(5);
 
-  IplImage * image = cvCreateImage(cvSize(width,height),8,3);
+    IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
-  // Instanciate the motion filters
-  float poses[3] = {0,0,0};
+    // Instanciate the motion filters
+    float poses[3] = {0,0,0};
 
-  MotionEstimation **motion_estimators;
-  motion_estimators = new MotionEstimation*[n_targets];
+    GMPHD targetTracking(n_targets, 2);
 
-  for (unsigned int i=0; i<n_targets; ++i) {
-      motion_estimators[i] = new MotionEstimation(&poses[i], 1e3, 1.0, 0.05);
-    }
+    // Track the circling targets
+    float measurements[6] = {0,0,0,0,0,0};
+    float filtered_state[6], predicted_state[6], previous_state[6];
 
-  // Track the circling targets
-  float measurements[6] = {0,0,0,0,0,0};
-  float filtered_state[6], predicted_state[6], previous_state[6];
-
+    /*
   for(;;angle += 0.01) {
       cvZero(image);
 
@@ -93,7 +89,6 @@ int main() {
       delete motion_estimators[i];
     }
 
-  delete []motion_estimators;
-
-  return 1;
+    */
+    return 1;
 }

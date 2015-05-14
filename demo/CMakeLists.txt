@@ -4,10 +4,10 @@ project(Demo)
 cmake_minimum_required(VERSION 2.6)
 
 # Make sure the compiler can find include files from our GMPHD library. 
-# include_directories(${PROJECT_SOURCE_DIR}/src)
-# include_directories(${PROJECT_SOURCE_DIR}/headers)
-# include_directories(${PROJECT_SOURCE_DIR}/../libGMPHD/headers)
-# include_directories(${PROJECT_SOURCE_DIR}/../libGMPHD/lib)
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/headers)
+include_directories(${PROJECT_SOURCE_DIR}/../libGMPHD/headers)
+include_directories(${PROJECT_SOURCE_DIR}/../libGMPHD/lib)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
