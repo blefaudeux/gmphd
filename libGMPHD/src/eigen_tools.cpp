@@ -40,7 +40,7 @@ float pseudo_inv(const Eigen::MatrixXf *mat_in,
 
   // Get matrices dimension :
   if (mat_in->cols () != mat_in->rows ()) {
-    THROW_ERR("Cannot compute matrix pseudo_inverse")
+    THROW_ERR("Cannot compute matrix pseudo_inverse");
   } else {
     dim = mat_in->cols ();
   }

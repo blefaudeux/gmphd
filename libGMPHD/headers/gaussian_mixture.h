@@ -37,8 +37,6 @@ struct GaussianModel {
  */
 class GaussianMixture {
   public :
-    vector <GaussianModel> g;
-
     /*!
      * \brief Default constructor
      */
@@ -144,6 +142,10 @@ class GaussianMixture {
      * \param trans_mat
      */
     void changeReferential(const Matrix4f *tranform);
+
+ public:
+    vector <GaussianModel> m_gaussians;
+
 
 };
 

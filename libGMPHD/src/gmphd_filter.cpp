@@ -28,37 +28,37 @@ void  GmphdFilter::buildUpdate () {
   // Concatenate all the wannabe targets :
   // - birth targets
   _i_birth_targets.clear();
-  if(_birth_targets.g.size () > 0) {
-    for (int i=0; i<_birth_targets.g.size (); ++i) {
-      _i_birth_targets.push_back (_expected_targets.g.size () + i);
+  if(_birth_targets.m_gaussians.size () > 0) {
+    for (int i=0; i<_birth_targets.m_gaussians.size (); ++i) {
+      _i_birth_targets.push_back (_expected_targets.m_gaussians.size () + i);
     }
 
-    _expected_targets.g.insert (_expected_targets.g.end (),
-                               _birth_targets.g.begin (),
-                               _birth_targets.g.begin () + _birth_targets.g.size ());
+    _expected_targets.m_gaussians.insert (_expected_targets.m_gaussians.end (),
+                               _birth_targets.m_gaussians.begin (),
+                               _birth_targets.m_gaussians.begin () + _birth_targets.m_gaussians.size ());
   }
 
   // - spawned targets
-  if (_spawned_targets.g.size () > 0) {
-    _expected_targets.g.insert (_expected_targets.g.end (),
-                               _spawned_targets.g.begin (),
-                               _spawned_targets.g.begin () + _spawned_targets.g.size ());
+  if (_spawned_targets.m_gaussians.size () > 0) {
+    _expected_targets.m_gaussians.insert (_expected_targets.m_gaussians.end (),
+                               _spawned_targets.m_gaussians.begin (),
+                               _spawned_targets.m_gaussians.begin () + _spawned_targets.m_gaussians.size ());
   }
 
   if (_verbose) {
     printf("GMPHD : inserted %d birth targets, now %d expected\n",
-           _birth_targets.g.size (),
-           _expected_targets.g.size());
+           _birth_targets.m_gaussians.size (),
+           _expected_targets.m_gaussians.size());
            _birth_targets.print ();
 
     printf("GMPHD : inserted %d spawned targets, now %d expected\n",
-           _spawned_targets.g.size (),
-           _expected_targets.g.size());
+           _spawned_targets.m_gaussians.size (),
+           _expected_targets.m_gaussians.size());
            _spawned_targets.print ();
     }
 
   // Compute PHD update components (for every expected target)
-  _n_predicted_targets = _expected_targets.g.size ();
+  _n_predicted_targets = _expected_targets.m_gaussians.size ();
 
   _expected_measure.resize (_n_predicted_targets);
   _expected_dispersion.resize (_n_predicted_targets);
@@ -68,26 +68,26 @@ void  GmphdFilter::buildUpdate () {
   for (int i=0; i< _n_predicted_targets; ++i) {
     // Compute the expected measurement
     _expected_measure[i] = _obs_matrix *
-                           _expected_targets.g[i].mean;
+                           _expected_targets.m_gaussians[i].mean;
 
     _expected_dispersion[i] = _obs_covariance +
-                              _obs_matrix * _expected_targets.g[i].cov *
+                              _obs_matrix * _expected_targets.m_gaussians[i].cov *
                               _obs_matrix_T;
 
     if (isnan(_expected_dispersion[i](0,0))) {
       printf("NaN value in dispersion\n");
-      cout << "Expected cov \n" << _expected_targets.g[i].cov << endl << endl;
-      THROW_ERR("NaN in GMPHD Update process")
+      cout << "Expected cov \n" << _expected_targets.m_gaussians[i].cov << endl << endl;
+      THROW_ERR("NaN in GMPHD Update process");
     }
 
     temp_matrix = _expected_dispersion[i].inverse();
 
-    _uncertainty[i] =  _expected_targets.g[i].cov *
+    _uncertainty[i] =  _expected_targets.m_gaussians[i].cov *
                        _obs_matrix_T *
                        temp_matrix;
 
     _covariance[i] = (I - _uncertainty[i]*_obs_matrix)
-                     * _expected_targets.g[i].cov;
+                     * _expected_targets.m_gaussians[i].cov;
 
   }
 }
@@ -97,15 +97,15 @@ void    GmphdFilter::extractTargets(float threshold) {
   float thld = max(threshold, 0.f);
 
   // Get trough every target, keep the ones whose weight is above threshold
-  _extracted_targets.g.clear();
+  _extracted_targets.m_gaussians.clear();
 
-  for (int i=0; i<_current_targets.g.size(); ++i)  {
-    if (_current_targets.g[i].weight >= thld) {
-      _extracted_targets.g.push_back(_current_targets.g[i]);
+  for (int i=0; i<_current_targets.m_gaussians.size(); ++i)  {
+    if (_current_targets.m_gaussians[i].weight >= thld) {
+      _extracted_targets.m_gaussians.push_back(_current_targets.m_gaussians[i]);
     }
   }
 
-  printf("GMPHD_extract : %d targets\n", _extracted_targets.g.size ());
+  printf("GMPHD_extract : %d targets\n", _extracted_targets.m_gaussians.size ());
 }
 
 void    GmphdFilter::getTrackedTargets(const float extract_thld,
@@ -120,16 +120,16 @@ void    GmphdFilter::getTrackedTargets(const float extract_thld,
   speed.clear();
   weight.clear();
 
-  for (int i=0; i< this->_extracted_targets.g.size(); ++i) {
-    position.push_back(this->_extracted_targets.g[i].mean(0,0));
-    position.push_back(this->_extracted_targets.g[i].mean(1,0));
-    position.push_back(this->_extracted_targets.g[i].mean(2,0));
+  for (int i=0; i< this->_extracted_targets.m_gaussians.size(); ++i) {
+    position.push_back(this->_extracted_targets.m_gaussians[i].mean(0,0));
+    position.push_back(this->_extracted_targets.m_gaussians[i].mean(1,0));
+    position.push_back(this->_extracted_targets.m_gaussians[i].mean(2,0));
 
-    speed.push_back(this->_extracted_targets.g[i].mean(3,0));
-    speed.push_back(this->_extracted_targets.g[i].mean(4,0));
-    speed.push_back(this->_extracted_targets.g[i].mean(5,0));
+    speed.push_back(this->_extracted_targets.m_gaussians[i].mean(3,0));
+    speed.push_back(this->_extracted_targets.m_gaussians[i].mean(4,0));
+    speed.push_back(this->_extracted_targets.m_gaussians[i].mean(5,0));
 
-    weight.push_back(this->_extracted_targets.g[i].weight);
+    weight.push_back(this->_extracted_targets.m_gaussians[i].weight);
   }
 }
 
@@ -203,35 +203,35 @@ float   GmphdFilter::gaussDensity_3D(const Matrix <float, 3,1> &point,
 
 void  GmphdFilter::predictBirth() {
 
-  _spawned_targets.g.clear ();
-  _birth_targets.g.clear ();
+  _spawned_targets.m_gaussians.clear ();
+  _birth_targets.m_gaussians.clear ();
 
   // -----------------------------------------
   // Compute spontaneous births
-  _birth_targets.g = _birth_model.g;
-  _n_predicted_targets += _birth_targets.g.size ();
+  _birth_targets.m_gaussians = _birth_model.m_gaussians;
+  _n_predicted_targets += _birth_targets.m_gaussians.size ();
 
   // -----------------------------------------
   // Compute spawned targets
   GaussianModel new_spawn;
 
-  for (int k=0; k< _current_targets.g.size (); ++k) {
+  for (int k=0; k< _current_targets.m_gaussians.size (); ++k) {
     for (int i=0; i< _spawn_model.size (); ++i) {
       // Define a gaussian model from the existing target
       // and spawning properties
-      new_spawn.weight = _current_targets.g[k].weight
+      new_spawn.weight = _current_targets.m_gaussians[k].weight
                          * _spawn_model[i].weight;
 
       new_spawn.mean = _spawn_model[i].offset
-                       + _spawn_model[i].trans * _current_targets.g[k].mean;
+                       + _spawn_model[i].trans * _current_targets.m_gaussians[k].mean;
 
       new_spawn.cov = _spawn_model[i].cov
                       + _spawn_model[i].trans *
-                      _current_targets.g[k].cov *
+                      _current_targets.m_gaussians[k].cov *
                       _spawn_model[i].trans.transpose();
 
       // Add this new gaussian to the list of expected targets
-      _spawned_targets.g.push_back (new_spawn);
+      _spawned_targets.m_gaussians.push_back (new_spawn);
 
       // Update the number of expected targets
       _n_predicted_targets ++;
@@ -242,23 +242,23 @@ void  GmphdFilter::predictBirth() {
 void  GmphdFilter::predictTargets () {
   GaussianModel new_target;
 
-  _expected_targets.g.resize(_current_targets.g.size ());
+  _expected_targets.m_gaussians.resize(_current_targets.m_gaussians.size ());
 
-  for (int i=0; i<_current_targets.g.size (); ++i) {
+  for (int i=0; i<_current_targets.m_gaussians.size (); ++i) {
     // Compute the new shape of the target
     new_target.weight = _p_survival_overall *
-                        _current_targets.g[i].weight;
+                        _current_targets.m_gaussians[i].weight;
 
     new_target.mean = _tgt_dyn_transitions *
-                      _current_targets.g[i].mean;
+                      _current_targets.m_gaussians[i].mean;
 
     new_target.cov = _tgt_dyn_covariance +
                      _tgt_dyn_transitions *
-                     _current_targets.g[i].cov *
+                     _current_targets.m_gaussians[i].cov *
                      _tgt_dyn_transitions.transpose();
 
     // Push back to the expected targets
-    _expected_targets.g[i] = new_target;
+    _expected_targets.m_gaussians[i] = new_target;
 
     ++_n_predicted_targets;
   }
@@ -267,16 +267,16 @@ void  GmphdFilter::predictTargets () {
 void GmphdFilter::print() {
   printf("Current gaussian mixture : \n");
 
-  for (int i=0; i< _current_targets.g.size(); ++i) {
+  for (int i=0; i< _current_targets.m_gaussians.size(); ++i) {
     printf("Gaussian %d - pos %.1f  %.1f %.1f - cov %.1f  %.1f %.1f - weight %.3f\n",
            i,
-           _current_targets.g[i].mean(0,0),
-           _current_targets.g[i].mean(1,0),
-           _current_targets.g[i].mean(2,0),
-           _current_targets.g[i].cov(0,0),
-           _current_targets.g[i].cov(1,1),
-           _current_targets.g[i].cov(2,2),
-           _current_targets.g[i].weight) ;
+           _current_targets.m_gaussians[i].mean(0,0),
+           _current_targets.m_gaussians[i].mean(1,0),
+           _current_targets.m_gaussians[i].mean(2,0),
+           _current_targets.m_gaussians[i].cov(0,0),
+           _current_targets.m_gaussians[i].cov(1,1),
+           _current_targets.m_gaussians[i].cov(2,2),
+           _current_targets.m_gaussians[i].weight) ;
   }
   printf("\n");
 }
@@ -330,14 +330,14 @@ void  GmphdFilter::pruneGaussians() {
 }
 
 void GmphdFilter::reset() {
-  this->_current_targets.g.clear ();
-  this->_extracted_targets.g.clear ();
+  this->_current_targets.m_gaussians.clear ();
+  this->_extracted_targets.m_gaussians.clear ();
 }
 
 
 void  GmphdFilter::setBirthModel(vector<GaussianModel> &birth_model) {
-  _birth_model.g.clear ();
-  _birth_model.g = birth_model;
+  _birth_model.m_gaussians.clear ();
+  _birth_model.m_gaussians = birth_model;
 }
 
 void  GmphdFilter::setDynamicsModel(float sampling,
@@ -391,7 +391,7 @@ void  GmphdFilter::setNewMeasurements(vector<float> &position,
                                       vector<float> &speed) {
 
   // Clear the gaussian mixture
-  this->_meas_targets.g.clear();
+  this->_meas_targets.m_gaussians.clear();
 
   GaussianModel new_obs;
 
@@ -411,7 +411,7 @@ void  GmphdFilter::setNewMeasurements(vector<float> &position,
     // Weight (?)
     new_obs.weight = 1.f;
 
-    this->_meas_targets.g.push_back(new_obs);
+    this->_meas_targets.m_gaussians.push_back(new_obs);
   }
 }
 
@@ -465,54 +465,54 @@ void  GmphdFilter::setSurvivalProbability(float _prob_survival) {
 
 void  GmphdFilter::update() {
   int n_meas, n_targt, index;
-  _current_targets.g.clear();
+  _current_targets.m_gaussians.clear();
 
   // We'll consider every possible association : vector size is (expected targets)*(measured targets)
-  _current_targets.g.resize((_meas_targets.g.size () + 1) *
-                            _expected_targets.g.size ());
+  _current_targets.m_gaussians.resize((_meas_targets.m_gaussians.size () + 1) *
+                            _expected_targets.m_gaussians.size ());
 
   // First set of gaussians : mere propagation of existing ones
   // \warning : don't propagate the "birth" targets...
   // we set their weight to 0
 
-  _n_predicted_targets =  _expected_targets.g.size ();
+  _n_predicted_targets =  _expected_targets.m_gaussians.size ();
   int i_birth_current = 0;
   for (int i=0; i<_n_predicted_targets; ++i) {
     if (i != _i_birth_targets[i_birth_current]) {
-      _current_targets.g[i].weight = (1.f - this->_p_detection_overall) *
-                                    _expected_targets.g[i].weight;
+      _current_targets.m_gaussians[i].weight = (1.f - this->_p_detection_overall) *
+                                    _expected_targets.m_gaussians[i].weight;
     } else {
       i_birth_current = min(i_birth_current+1, (int) _i_birth_targets.size ());
-      _current_targets.g[i].weight = 0.f;
+      _current_targets.m_gaussians[i].weight = 0.f;
     }
 
-    _current_targets.g[i].mean = _expected_targets.g[i].mean;
-    _current_targets.g[i].cov  = _expected_targets.g[i].cov;
+    _current_targets.m_gaussians[i].mean = _expected_targets.m_gaussians[i].mean;
+    _current_targets.m_gaussians[i].cov  = _expected_targets.m_gaussians[i].cov;
   }
 
 
   // Second set of gaussians : match observations and previsions
-  if (_meas_targets.g.size () == 0) {
+  if (_meas_targets.m_gaussians.size () == 0) {
     return;
   } else {
-    for (n_meas=1; n_meas <= _meas_targets.g.size (); ++n_meas) {
+    for (n_meas=1; n_meas <= _meas_targets.m_gaussians.size (); ++n_meas) {
       for (n_targt = 0; n_targt < _n_predicted_targets; ++n_targt) {
 
         index = n_meas * _n_predicted_targets + n_targt;
 
         // Compute matching factor between predictions and measures.
         // \warning : we only take positions into account there
-        _current_targets.g[index].weight =  _p_detection_overall *
-                                            _expected_targets.g[n_targt].weight *
-                                            gaussDensity_3D(_meas_targets.g[n_meas -1].mean.block(0,0,3,1),
+        _current_targets.m_gaussians[index].weight =  _p_detection_overall *
+                                            _expected_targets.m_gaussians[n_targt].weight *
+                                            gaussDensity_3D(_meas_targets.m_gaussians[n_meas -1].mean.block(0,0,3,1),
                                                             _expected_measure[n_targt].block(0,0,3,1),
                                                             _expected_dispersion[n_targt].block(0,0,3,3));
 
-        _current_targets.g[index].mean =  _expected_targets.g[n_targt].mean +
+        _current_targets.m_gaussians[index].mean =  _expected_targets.m_gaussians[n_targt].mean +
                                           _uncertainty[n_targt] *
-                                          (_meas_targets.g[n_meas -1].mean - _expected_measure[n_targt]);
+                                          (_meas_targets.m_gaussians[n_meas -1].mean - _expected_measure[n_targt]);
 
-        _current_targets.g[index].cov = _covariance[n_targt];
+        _current_targets.m_gaussians[index].cov = _covariance[n_targt];
       }
 
       // Normalize weights in the same predicted set,

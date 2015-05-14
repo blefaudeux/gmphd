@@ -160,13 +160,13 @@ public:
     void  setSpawnModel(vector <SpawningModel, aligned_allocator<SpawningModel> > &_spawn_models);
 
 private:
-    bool  _verbose;
-    bool  _motion_model;
+    int   _n_max_gaussians;
     int   _dim_measures;
+    bool  _motion_model;
+    bool  _verbose;
     int   _dim_state;
     int   _n_predicted_targets;
     int   _n_current_targets;
-    int   _n_max_gaussians;
     int   _prune_max_nb;
 
     float _p_survival_overall;
