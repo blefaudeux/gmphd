@@ -12,9 +12,9 @@ bool compare_index(index_w first,
 
 
 void  GaussianModel::reset () {
-    this->mean = MatrixXf::Zero(6,1);
-    this->cov  = MatrixXf::Identity(6,6);
-    this->weight = 0.f;
+    mean = MatrixXf::Zero(6,1);
+    cov  = MatrixXf::Identity(6,6);
+    weight = 0.f;
 }
 
 GaussianMixture::GaussianMixture() {
@@ -24,7 +24,7 @@ GaussianMixture::GaussianMixture() {
 // Copy constructor
 // useful ?
 GaussianMixture::GaussianMixture(const GaussianMixture &source) {
-    this->m_gaussians = source.m_gaussians;
+    m_gaussians = source.m_gaussians;
 }
 
 GaussianMixture GaussianMixture::operator = (const GaussianMixture &source) {
@@ -34,7 +34,7 @@ GaussianMixture GaussianMixture::operator = (const GaussianMixture &source) {
         return *this;
 
     // Else, use vectors & Eigen "=" operator
-    this->m_gaussians = source.m_gaussians;
+    m_gaussians = source.m_gaussians;
     return *this;
 }
 
@@ -77,13 +77,13 @@ void  GaussianMixture::normalize (float linear_offset) {
 
     float sum = 0.f;
 
-    for (int i=0; i<this->m_gaussians.size (); ++i) {
-        sum += this->m_gaussians[i].weight;
+    for ( auto const & gaussian : m_gaussians) {
+        sum += gaussian.weight;
     }
 
     if ((linear_offset + sum) != 0.f) {
-        for (int i=0; i<this->m_gaussians.size (); ++i) {
-            this->m_gaussians[i].weight /= (linear_offset + sum);
+        for (auto & gaussian : m_gaussians) {
+            gaussian.weight /= (linear_offset + sum);
         }
     }
 }
@@ -96,33 +96,35 @@ void  GaussianMixture::normalize (float linear_offset,
     float sum = 0.f;
 
     for (int i = start_pos; i< stop_pos; ++i) {
-        sum += this->m_gaussians[i * step].weight;
+        sum += m_gaussians[i * step].weight;
     }
 
     if ((linear_offset + sum) != 0.f) {
         for (int i = start_pos; i< stop_pos; ++i) {
-            this->m_gaussians[i * step].weight /= (linear_offset + sum);
+            m_gaussians[i * step].weight /= (linear_offset + sum);
         }
     }
 }
 
 void GaussianMixture::print() {
-    if (this->m_gaussians.size () > 0) {
+    if (m_gaussians.size () > 0) {
         printf("Gaussian mixture : \n");
 
-        for (int i=0; i< this->m_gaussians.size(); ++i) {
+        int i= 0;
+        for ( auto const & gaussian : m_gaussians)
+        {
             printf("%2d - pos %3.1f | %3.1f | %3.1f - cov %3.1f | %3.1f | %3.1f - spd %3.2f | %3.2f | %3.2f - weight %3.3f\n",
-                   i,
-                   this->m_gaussians[i].mean(0,0),
-                   this->m_gaussians[i].mean(1,0),
-                   this->m_gaussians[i].mean(2,0),
-                   this->m_gaussians[i].cov(0,0),
-                   this->m_gaussians[i].cov(1,1),
-                   this->m_gaussians[i].cov(2,2),
-                   this->m_gaussians[i].mean(3,0),
-                   this->m_gaussians[i].mean(4,0),
-                   this->m_gaussians[i].mean(5,0),
-                   this->m_gaussians[i].weight) ;
+                   i++,
+                   gaussian.mean(0,0),
+                   gaussian.mean(1,0),
+                   gaussian.mean(2,0),
+                   gaussian.cov(0,0),
+                   gaussian.cov(1,1),
+                   gaussian.cov(2,2),
+                   gaussian.mean(3,0),
+                   gaussian.mean(4,0),
+                   gaussian.mean(5,0),
+                   gaussian.weight) ;
         }
         printf("\n");
     }
@@ -142,20 +144,20 @@ void GaussianMixture::changeReferential(const Matrix4f *tranform)  {
     // - 6x6 covariance
 
     // For every gaussian model, change referential
-    for (int i=0; i<this->m_gaussians.size(); ++i)  {
+    for ( auto & gaussian : m_gaussians)  {
         // Change positions
-        temp_vec.block(0,0, 3,1) = this->m_gaussians[i].mean.block(0,0,3,1);
+        temp_vec.block(0,0, 3,1) = gaussian.mean.block(0,0,3,1);
 
         temp_vec_new = *tranform * temp_vec;
 
-        this->m_gaussians[i].mean.block(0,0,3,1) = temp_vec_new.block(0,0,3,1);
+        gaussian.mean.block(0,0,3,1) = temp_vec_new.block(0,0,3,1);
 
         // Change speeds referential
-        temp_vec.block(0,0, 3,1) = this->m_gaussians[i].mean.block(3,0,3,1);
+        temp_vec.block(0,0, 3,1) = gaussian.mean.block(3,0,3,1);
 
         temp_vec_new = *tranform * temp_vec;
 
-        this->m_gaussians[i].mean.block(3,0,3,1) = temp_vec_new.block(0,0,3,1);
+        gaussian.mean.block(3,0,3,1) = temp_vec_new.block(0,0,3,1);
 
         // Change covariance referential
         //  (only take the rotation into account)
@@ -177,13 +179,15 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
 
         // Build merged gaussian :
         // - weight is the sum of all weights
-        for (int i=0; i< i_gaussians_to_merge.size (); ++i) {
-            merged_model.weight += this->m_gaussians[i_gaussians_to_merge[i]].weight;
+        for ( auto const & i_g : i_gaussians_to_merge)
+        {
+            merged_model.weight += m_gaussians[i_g].weight;
         }
 
         // - gaussian center is the weighted mean of all centers
-        for (int i=0; i<i_gaussians_to_merge.size (); ++i) {
-            merged_model.mean += this->m_gaussians[i_gaussians_to_merge[i]].mean * this->m_gaussians[i_gaussians_to_merge[i]].weight;
+        for (auto const & i_g : i_gaussians_to_merge)
+        {
+            merged_model.mean += m_gaussians[i_g].mean * m_gaussians[i_g].weight;
         }
 
         if (merged_model.weight != 0.f) {
@@ -193,20 +197,21 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
         // - covariance is related to initial gaussian model cov and the discrepancy
         // from merged mean position and every merged gaussian pose
         merged_model.cov.setZero(6,6);
-        for (int i=0; i<i_gaussians_to_merge.size (); ++i) {
-            diff = merged_model.mean - this->m_gaussians[i_gaussians_to_merge[i]].mean;
+        for (auto const & i_g : i_gaussians_to_merge)
+        {
+            diff = merged_model.mean - m_gaussians[i_g].mean;
 
-            merged_model.cov += this->m_gaussians[i_gaussians_to_merge[i]].weight *
-                    (this->m_gaussians[i_gaussians_to_merge[i]].cov +
-                    diff * diff.transpose());
+            merged_model.cov += m_gaussians[i_g].weight * (m_gaussians[i_g].cov + diff * diff.transpose());
         }
 
-        if (merged_model.weight != 0.f) {
+        if (merged_model.weight != 0.f)
+        {
             merged_model.cov /= merged_model.weight;
         }
+
     } else {
         // Just return the initial single gaussian model :
-        merged_model = this->m_gaussians[i_gaussians_to_merge[0]];
+        merged_model = m_gaussians[i_gaussians_to_merge[0]];
     }
 
     if (b_remove_from_mixture) {
@@ -217,10 +222,10 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
                   compare_int);
 
         // - pop out the corresponding gaussians, in reverse
-        std::vector<GaussianModel>::iterator it = this->m_gaussians.begin ();
+        std::vector<GaussianModel>::iterator it = m_gaussians.begin ();
 
         for (int i=i_gaussians_to_merge.size () -1; i>-1; ++i) {
-            this->m_gaussians.erase ( it + i);
+            m_gaussians.erase ( it + i);
         }
     }
 
@@ -233,11 +238,11 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
                                         float  merge_threshold,
                                         int    max_gaussians) {
     // Sort the gaussians mixture, ascending order
-    this->qsort ();
+    qsort ();
 
 #ifdef DEBUG_LINUX
     printf("GM Pruning : \n");
-    this->print ();
+    print ();
 #endif
 
     bool b_finished = false;
@@ -252,15 +257,14 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
     merged_gaussian.reset();
     pruned_targets.m_gaussians.clear();
 
-    while ((!this->m_gaussians.empty()) &&
-           (pruned_targets.m_gaussians.size () < max_gaussians) &&
-           (!b_finished)){
-
+    while ((!m_gaussians.empty()) && (pruned_targets.m_gaussians.size () < max_gaussians)
+           && !b_finished )
+    {
         // - Pick the bigger gaussian (based on weight)
-        i_best = this->selectBestGaussian ();
+        i_best = selectBestGaussian ();
 
         if ((i_best == -1) ||
-            (this->m_gaussians[i_best].weight < trunc_threshold)){
+            (m_gaussians[i_best].weight < trunc_threshold)){
             b_finished = true;
 
         } else {
@@ -274,6 +278,7 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
             i_close_to_best.push_back (i_best); // Add the initial gaussian
 
             if (i_close_to_best.size() > 1) {
+
 #ifdef DEBUG_LINUX
                 printf("Merging :");
                 for (int i = 0; i<i_close_to_best.size (); ++i) {
@@ -292,12 +297,12 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
 
             // - Remove all the merged gaussians from current_targets :
             // -- Sort the indexes
-            sort(i_close_to_best.begin(),
-                 i_close_to_best.end());
+            sort(i_close_to_best.begin(), i_close_to_best.end());
 
             // -- Remove from the last one (to keep previous indexes unchanged)
-            while (!i_close_to_best.empty()) {
-                if (this->m_gaussians.empty()) {
+            while (!i_close_to_best.empty())
+            {
+                if (m_gaussians.empty()) {
                     printf ("Vector is empty, should not go there..\n");
                     break;
                 }
@@ -305,7 +310,7 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
                 index = i_close_to_best.back();
                 i_close_to_best.pop_back();
 
-                position = this->m_gaussians.erase(this->m_gaussians.begin() + index);
+                position = m_gaussians.erase(m_gaussians.begin() + index);
             }
         }
     }
@@ -314,23 +319,25 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
 }
 
 
-
 int   GaussianMixture::selectBestGaussian () {
+    // TODO: Ben - move this to a lambda and std::for_each
+
     float best_weight = 0.f;
     int   best_index = -1;
-
-    for (int i=0; i<this->m_gaussians.size (); ++i) {
-        if (this->m_gaussians[i].weight > best_weight) {
+    int i= 0;
+    for ( auto const & gaussian : m_gaussians)
+    {
+        if (gaussian.weight > best_weight) {
             best_index = i;
-            best_weight = this->m_gaussians[i].weight;
+            best_weight = gaussian.weight;
         }
+        ++i;
     }
 
     return best_index;
 }
 
-void  GaussianMixture::selectCloseGaussians (int    i_ref,
-                                             float  threshold,
+void  GaussianMixture::selectCloseGaussians (int    i_ref, float  threshold,
                                              vector<int> &close_gaussians) {
 
     close_gaussians.clear ();
@@ -341,23 +348,27 @@ void  GaussianMixture::selectCloseGaussians (int    i_ref,
     Matrix<float, 3,3> cov_inverse;
 
     // We only take positions into account there
-    for (int i=0; i<m_gaussians.size (); ++i) {
-        if (i != i_ref) {
+    int i= 0;
+    for (auto const & gaussian : m_gaussians)
+    {
+        if (i != i_ref)
+        {
             // Compute distance
             diff_vec = m_gaussians[i_ref].mean.block(0,0,3,1) -
-                    m_gaussians[i].mean.block(0,0,3,1);
+                       gaussian.mean.block(0,0,3,1);
 
             cov_inverse = (m_gaussians[i_ref].cov.block(0,0,3,3)).inverse();
 
             gauss_distance = diff_vec.transpose() *
-                    cov_inverse.block(0,0,3,3) *
-                    diff_vec;
+                             cov_inverse.block(0,0,3,3) *
+                             diff_vec;
 
             // Add to the set of close gaussians, if below threshold
-            if ((gauss_distance < threshold) &&
-                (m_gaussians[i].weight != 0.f)){
+            if ((gauss_distance < threshold) && (gaussian.weight != 0.f))
+            {
                 close_gaussians.push_back (i);
             }
         }
+        ++i;
     }
 }
