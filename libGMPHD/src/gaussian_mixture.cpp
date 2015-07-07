@@ -7,18 +7,9 @@ bool compare_int (int i,int j)
     return (i<j);
 }
 
-
-bool compare_index(index_w first, index_w second)
+bool compareIndex(index_w & first, index_w & second )
 {
-    return first.weight > second.weight;
-}
-
-
-void  GaussianModel::reset ()
-{
-    mean = MatrixXf::Zero(6,1);
-    cov  = MatrixXf::Identity(6,6);
-    weight = 0.f;
+     return first.m_weight > second.m_weight;
 }
 
 GaussianMixture::GaussianMixture()
@@ -53,13 +44,13 @@ void  GaussianMixture::qsort () {
     int i = 0;
     for (auto const & gaussian : m_gaussians)
     {
-        item.weight = gaussian.weight;
-        item.index = i++;
+        item.m_weight = gaussian.m_weight;
+        item.m_index = i++;
         gauss_list.push_back (item);
     }
 
     // Sort
-    gauss_list.sort(compare_index);
+    gauss_list.sort(compareIndex);
 
     // Get the sorted gaussians back
     vector <GaussianModel> sorted_gaussians;
@@ -71,7 +62,7 @@ void  GaussianMixture::qsort () {
         item = gauss_list.front ();
         gauss_list.pop_front ();
 
-        sorted_gaussians[i] = m_gaussians[item.index];
+        sorted_gaussians[i] = m_gaussians[item.m_index];
         ++i;
     }
 
@@ -86,14 +77,14 @@ void  GaussianMixture::normalize (float linear_offset)
 
     for ( auto const & gaussian : m_gaussians)
     {
-        sum += gaussian.weight;
+        sum += gaussian.m_weight;
     }
 
     if ((linear_offset + sum) != 0.f)
     {
         for (auto & gaussian : m_gaussians)
         {
-            gaussian.weight /= (linear_offset + sum);
+            gaussian.m_weight /= (linear_offset + sum);
         }
     }
 }
@@ -108,14 +99,14 @@ void  GaussianMixture::normalize (float linear_offset,
 
     for (int i = start_pos; i< stop_pos; ++i)
     {
-        sum += m_gaussians[i * step].weight;
+        sum += m_gaussians[i * step].m_weight;
     }
 
     if ((linear_offset + sum) != 0.f)
     {
         for (int i = start_pos; i< stop_pos; ++i)
         {
-            m_gaussians[i * step].weight /= (linear_offset + sum);
+            m_gaussians[i * step].m_weight /= (linear_offset + sum);
         }
     }
 }
@@ -131,16 +122,16 @@ void GaussianMixture::print()
         {
             printf("%2d - pos %3.1f | %3.1f | %3.1f - cov %3.1f | %3.1f | %3.1f - spd %3.2f | %3.2f | %3.2f - weight %3.3f\n",
                    i++,
-                   gaussian.mean(0,0),
-                   gaussian.mean(1,0),
-                   gaussian.mean(2,0),
-                   gaussian.cov(0,0),
-                   gaussian.cov(1,1),
-                   gaussian.cov(2,2),
-                   gaussian.mean(3,0),
-                   gaussian.mean(4,0),
-                   gaussian.mean(5,0),
-                   gaussian.weight) ;
+                   gaussian.m_mean(0,0),
+                   gaussian.m_mean(1,0),
+                   gaussian.m_mean(2,0),
+                   gaussian.m_cov(0,0),
+                   gaussian.m_cov(1,1),
+                   gaussian.m_cov(2,2),
+                   gaussian.m_mean(3,0),
+                   gaussian.m_mean(4,0),
+                   gaussian.m_mean(5,0),
+                   gaussian.m_weight) ;
         }
         printf("\n");
     }
@@ -156,25 +147,25 @@ void GaussianMixture::changeReferential(const Matrix4f *tranform)
     // mat1.block(i,j,rows,cols)
 
     // Gaussian model :
-    // - [x, y, z, dx/dt, dy/dt, dz/dt] mean values
+    // - [x, y, z, dx/dt, dy/dt, dz/dt] m_mean values
     // - 6x6 covariance
 
     // For every gaussian model, change referential
     for ( auto & gaussian : m_gaussians)
     {
         // Change positions
-        temp_vec.block(0,0, 3,1) = gaussian.mean.block(0,0,3,1);
+        temp_vec.block(0,0, 3,1) = gaussian.m_mean.block(0,0,3,1);
 
         temp_vec_new = *tranform * temp_vec;
 
-        gaussian.mean.block(0,0,3,1) = temp_vec_new.block(0,0,3,1);
+        gaussian.m_mean.block(0,0,3,1) = temp_vec_new.block(0,0,3,1);
 
         // Change speeds referential
-        temp_vec.block(0,0, 3,1) = gaussian.mean.block(3,0,3,1);
+        temp_vec.block(0,0, 3,1) = gaussian.m_mean.block(3,0,3,1);
 
         temp_vec_new = *tranform * temp_vec;
 
-        gaussian.mean.block(3,0,3,1) = temp_vec_new.block(0,0,3,1);
+        gaussian.m_mean.block(3,0,3,1) = temp_vec_new.block(0,0,3,1);
 
         // Change covariance referential
         //  (only take the rotation into account)
@@ -198,32 +189,32 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
         // - weight is the sum of all weights
         for ( auto const & i_g : i_gaussians_to_merge)
         {
-            merged_model.weight += m_gaussians[i_g].weight;
+            merged_model.m_weight += m_gaussians[i_g].m_weight;
         }
 
-        // - gaussian center is the weighted mean of all centers
+        // - gaussian center is the weighted m_mean of all centers
         for (auto const & i_g : i_gaussians_to_merge)
         {
-            merged_model.mean += m_gaussians[i_g].mean * m_gaussians[i_g].weight;
+            merged_model.m_mean += m_gaussians[i_g].m_mean * m_gaussians[i_g].m_weight;
         }
 
-        if (merged_model.weight != 0.f) {
-            merged_model.mean /= merged_model.weight;
+        if (merged_model.m_weight != 0.f) {
+            merged_model.m_mean /= merged_model.m_weight;
         }
 
         // - covariance is related to initial gaussian model cov and the discrepancy
-        // from merged mean position and every merged gaussian pose
-        merged_model.cov.setZero(6,6);
+        // from merged m_mean position and every merged gaussian pose
+        merged_model.m_cov.setZero(6,6);
         for (auto const & i_g : i_gaussians_to_merge)
         {
-            diff = merged_model.mean - m_gaussians[i_g].mean;
+            diff = merged_model.m_mean - m_gaussians[i_g].m_mean;
 
-            merged_model.cov += m_gaussians[i_g].weight * (m_gaussians[i_g].cov + diff * diff.transpose());
+            merged_model.m_cov += m_gaussians[i_g].m_weight * (m_gaussians[i_g].m_cov + diff * diff.transpose());
         }
 
-        if (merged_model.weight != 0.f)
+        if (merged_model.m_weight != 0.f)
         {
-            merged_model.cov /= merged_model.weight;
+            merged_model.m_cov /= merged_model.m_weight;
         }
     }
     else
@@ -251,7 +242,7 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
     return merged_model;
 }
 
-GaussianMixture  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, int max_gaussians)
+void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, int max_gaussians)
 {
     // Sort the gaussians mixture, ascending order
     qsort ();
@@ -273,7 +264,7 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold, float  merge_thr
         // - Pick the bigger gaussian (based on weight)
         i_best = selectBestGaussian ();
 
-        if ((i_best == -1) || (m_gaussians[i_best].weight < trunc_threshold))
+        if ((i_best == -1) || (m_gaussians[i_best].m_weight < trunc_threshold))
         {
             b_finished = true;
         }
@@ -321,7 +312,7 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold, float  merge_thr
         }
     }
 
-    return pruned_targets;
+    m_gaussians = pruned_targets.m_gaussians;
 }
 
 
@@ -333,9 +324,9 @@ int   GaussianMixture::selectBestGaussian () {
     int i= 0;
     for ( auto const & gaussian : m_gaussians)
     {
-        if (gaussian.weight > best_weight) {
+        if (gaussian.m_weight > best_weight) {
             best_index = i;
-            best_weight = gaussian.weight;
+            best_weight = gaussian.m_weight;
         }
         ++i;
     }
@@ -360,17 +351,17 @@ void  GaussianMixture::selectCloseGaussians (int    i_ref, float  threshold,
         if (i != i_ref)
         {
             // Compute distance
-            diff_vec = m_gaussians[i_ref].mean.block(0,0,3,1) -
-                       gaussian.mean.block(0,0,3,1);
+            diff_vec = m_gaussians[i_ref].m_mean.block(0,0,3,1) -
+                       gaussian.m_mean.block(0,0,3,1);
 
-            cov_inverse = (m_gaussians[i_ref].cov.block(0,0,3,3)).inverse();
+            cov_inverse = (m_gaussians[i_ref].m_cov.block(0,0,3,3)).inverse();
 
             gauss_distance = diff_vec.transpose() *
                              cov_inverse.block(0,0,3,3) *
                              diff_vec;
 
             // Add to the set of close gaussians, if below threshold
-            if ((gauss_distance < threshold) && (gaussian.weight != 0.f))
+            if ((gauss_distance < threshold) && (gaussian.m_weight != 0.f))
             {
                 close_gaussians.push_back (i);
             }

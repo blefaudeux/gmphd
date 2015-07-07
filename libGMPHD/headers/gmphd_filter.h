@@ -15,11 +15,11 @@ using namespace Eigen;
  */
 struct SpawningModel {
 
-    Matrix<float, 6,6> trans; // Transition matrix
-    Matrix<float, 6,6> cov;
-    Matrix<float, 6,1> offset;
+    Matrix<float, 6,6> m_trans; // Transition matrix
+    Matrix<float, 6,6> m_cov;
+    Matrix<float, 6,1> m_offset;
 
-    float weight;
+    float m_weight;
 };
 
 
