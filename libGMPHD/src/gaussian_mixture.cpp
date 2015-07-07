@@ -2,33 +2,37 @@
 // Author : Benjamin Lefaudeux (blefaudeux@github)
 
 // Some stuff to be able to sort out index vectors
-bool compare_int (int i,int j) { return (i<j); }
+bool compare_int (int i,int j)
+{
+    return (i<j);
+}
 
 
-bool compare_index(index_w first,
-                   index_w second) {
+bool compare_index(index_w first, index_w second)
+{
     return first.weight > second.weight;
 }
 
 
-void  GaussianModel::reset () {
+void  GaussianModel::reset ()
+{
     mean = MatrixXf::Zero(6,1);
     cov  = MatrixXf::Identity(6,6);
     weight = 0.f;
 }
 
-GaussianMixture::GaussianMixture() {
+GaussianMixture::GaussianMixture()
+{
     m_gaussians.clear ();
 }
 
-// Copy constructor
-// useful ?
-GaussianMixture::GaussianMixture(const GaussianMixture &source) {
+GaussianMixture::GaussianMixture( GaussianMixture const &source)
+{
     m_gaussians = source.m_gaussians;
 }
 
-GaussianMixture GaussianMixture::operator = (const GaussianMixture &source) {
-
+GaussianMixture GaussianMixture::operator = ( GaussianMixture const &source)
+{
     // Skip assignment if same object
     if (this == &source)
         return *this;
@@ -39,7 +43,7 @@ GaussianMixture GaussianMixture::operator = (const GaussianMixture &source) {
 }
 
 void  GaussianMixture::qsort () {
-    // TODO: Ben - rewrite this crap
+    // TODO: Ben - rewrite this crap with lambdas
 
     // Build a list to sort out based on gaussian weights
     index_w item;
@@ -47,7 +51,8 @@ void  GaussianMixture::qsort () {
 
     gauss_list.clear();
     int i = 0;
-    for (auto const & gaussian : m_gaussians) {
+    for (auto const & gaussian : m_gaussians)
+    {
         item.weight = gaussian.weight;
         item.index = i++;
         gauss_list.push_back (item);
@@ -61,7 +66,8 @@ void  GaussianMixture::qsort () {
 
     sorted_gaussians.resize(m_gaussians.size ());
     i = 0;
-    while ( !gauss_list.empty ()) {
+    while ( !gauss_list.empty ())
+    {
         item = gauss_list.front ();
         gauss_list.pop_front ();
 
@@ -73,16 +79,20 @@ void  GaussianMixture::qsort () {
 }
 
 
-void  GaussianMixture::normalize (float linear_offset) {
+void  GaussianMixture::normalize (float linear_offset)
+{
 
     float sum = 0.f;
 
-    for ( auto const & gaussian : m_gaussians) {
+    for ( auto const & gaussian : m_gaussians)
+    {
         sum += gaussian.weight;
     }
 
-    if ((linear_offset + sum) != 0.f) {
-        for (auto & gaussian : m_gaussians) {
+    if ((linear_offset + sum) != 0.f)
+    {
+        for (auto & gaussian : m_gaussians)
+        {
             gaussian.weight /= (linear_offset + sum);
         }
     }
@@ -91,23 +101,29 @@ void  GaussianMixture::normalize (float linear_offset) {
 void  GaussianMixture::normalize (float linear_offset,
                                   int start_pos,
                                   int stop_pos,
-                                  int step) {
+                                  int step)
+{
 
     float sum = 0.f;
 
-    for (int i = start_pos; i< stop_pos; ++i) {
+    for (int i = start_pos; i< stop_pos; ++i)
+    {
         sum += m_gaussians[i * step].weight;
     }
 
-    if ((linear_offset + sum) != 0.f) {
-        for (int i = start_pos; i< stop_pos; ++i) {
+    if ((linear_offset + sum) != 0.f)
+    {
+        for (int i = start_pos; i< stop_pos; ++i)
+        {
             m_gaussians[i * step].weight /= (linear_offset + sum);
         }
     }
 }
 
-void GaussianMixture::print() {
-    if (m_gaussians.size () > 0) {
+void GaussianMixture::print()
+{
+    if (m_gaussians.size () > 0)
+    {
         printf("Gaussian mixture : \n");
 
         int i= 0;
@@ -130,8 +146,8 @@ void GaussianMixture::print() {
     }
 }
 
-void GaussianMixture::changeReferential(const Matrix4f *tranform)  {
-
+void GaussianMixture::changeReferential(const Matrix4f *tranform)
+{
     Matrix<float, 4,1> temp_vec;
     Matrix<float, 4,1> temp_vec_new;
 
@@ -144,7 +160,8 @@ void GaussianMixture::changeReferential(const Matrix4f *tranform)  {
     // - 6x6 covariance
 
     // For every gaussian model, change referential
-    for ( auto & gaussian : m_gaussians)  {
+    for ( auto & gaussian : m_gaussians)
+    {
         // Change positions
         temp_vec.block(0,0, 3,1) = gaussian.mean.block(0,0,3,1);
 
@@ -166,14 +183,14 @@ void GaussianMixture::changeReferential(const Matrix4f *tranform)  {
 }
 
 
-GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merge,
-                                                bool b_remove_from_mixture) {
-
+GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merge, bool b_remove_from_mixture)
+{
     GaussianModel merged_model;
 
     Matrix<float, 6,1> diff;
 
-    if (i_gaussians_to_merge.size() > 1) {
+    if (i_gaussians_to_merge.size() > 1)
+    {
         // Reset the destination
         merged_model.reset ();
 
@@ -208,13 +225,15 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
         {
             merged_model.cov /= merged_model.weight;
         }
-
-    } else {
+    }
+    else
+    {
         // Just return the initial single gaussian model :
         merged_model = m_gaussians[i_gaussians_to_merge[0]];
     }
 
-    if (b_remove_from_mixture) {
+    if (b_remove_from_mixture)
+    {
         // Remove input gaussians from the mixture
         // - sort the index vector
         std::sort(i_gaussians_to_merge.begin (),
@@ -232,18 +251,10 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
     return merged_model;
 }
 
-
-
-GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
-                                        float  merge_threshold,
-                                        int    max_gaussians) {
+GaussianMixture  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, int max_gaussians)
+{
     // Sort the gaussians mixture, ascending order
     qsort ();
-
-#ifdef DEBUG_LINUX
-    printf("GM Pruning : \n");
-    print ();
-#endif
 
     bool b_finished = false;
     int index, i_best;
@@ -257,17 +268,17 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
     merged_gaussian.reset();
     pruned_targets.m_gaussians.clear();
 
-    while ((!m_gaussians.empty()) && (pruned_targets.m_gaussians.size () < max_gaussians)
-           && !b_finished )
+    while ( (!m_gaussians.empty()) && (pruned_targets.m_gaussians.size () < max_gaussians) && !b_finished )
     {
         // - Pick the bigger gaussian (based on weight)
         i_best = selectBestGaussian ();
 
-        if ((i_best == -1) ||
-            (m_gaussians[i_best].weight < trunc_threshold)){
+        if ((i_best == -1) || (m_gaussians[i_best].weight < trunc_threshold))
+        {
             b_finished = true;
-
-        } else {
+        }
+        else
+        {
             // - Select all the gaussians close enough, to merge if needed
             i_close_to_best.clear();
             selectCloseGaussians (i_best,
@@ -277,18 +288,12 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
             // - Build a new merged gaussian
             i_close_to_best.push_back (i_best); // Add the initial gaussian
 
-            if (i_close_to_best.size() > 1) {
-
-#ifdef DEBUG_LINUX
-                printf("Merging :");
-                for (int i = 0; i<i_close_to_best.size (); ++i) {
-                    printf(" %d", i_close_to_best[i]);
-                }
-                printf("\n");
-#endif
-
+            if (i_close_to_best.size() > 1)
+            {
                 merged_gaussian = mergeGaussians (i_close_to_best, false);
-            } else {
+            }
+            else
+            {
                 merged_gaussian = m_gaussians[i_close_to_best[0]];
             }
 
@@ -302,7 +307,8 @@ GaussianMixture  GaussianMixture::prune(float  trunc_threshold,
             // -- Remove from the last one (to keep previous indexes unchanged)
             while (!i_close_to_best.empty())
             {
-                if (m_gaussians.empty()) {
+                if (m_gaussians.empty())
+                {
                     printf ("Vector is empty, should not go there..\n");
                     break;
                 }
