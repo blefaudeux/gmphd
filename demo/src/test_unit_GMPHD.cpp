@@ -24,71 +24,56 @@ int main() {
 
     int n_targets = 5;
 
-    // vector<vector<float[2]> > vec_poses;
-    // vec_poses.resize(5);
-
     IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
     // Instanciate the motion filters
-    float poses[3] = {0,0,0};
-
     GMPHD targetTracking(n_targets, 2);
 
     // Track the circling targets
     float measurements[6] = {0,0,0,0,0,0};
-    float filtered_state[6], predicted_state[6], previous_state[6];
 
-    /*
-  for(;;angle += 0.01) {
-      cvZero(image);
+    std::vector<float> targetPosition, targetSpeed, targetWeight;
 
-      // Create a new measurement for every target, and do the update
-      for (unsigned int i=0; i< n_targets; ++i) {
-          motion_estimators[i]->getLatestState(previous_state);
+    for(;;angle += 0.01) {
+        cvZero(image);
 
-          // Propagate the previous state
-          motion_estimators[i]->predict();
+        // Get all the predicted targets
+        targetTracking.propagate();
+        targetTracking.getTrackedTargets(0.2f, targetPosition, targetSpeed, targetWeight );
 
-          // Get the predicted state :
-          motion_estimators[i]->getPropagatedState(predicted_state);
+        // Create a new measurement, and do the update
+        for (unsigned int i=0; i< n_targets; ++i) {
+            // Update the state with a new noisy measurement :
+            measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
+            measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
 
-          // Update the state with a new noisy measurement :
-          measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
-          measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
+            // Define a new 'speed' measurement
+            measurements[3] = measurements[0] - previous_state[0];
+            measurements[4] = measurements[1] - previous_state[1];
 
-          // Define a new 'speed' measurement
-          measurements[3] = measurements[0] - previous_state[0];
-          measurements[4] = measurements[1] - previous_state[1];
+            motion_estimators[i]->update(measurements);
 
-          motion_estimators[i]->update(measurements);
+            // Get the filtered state :
+            motion_estimators[i]->getLatestState(filtered_state);
 
-          // Get the filtered state :
-          motion_estimators[i]->getLatestState(filtered_state);
+            //vec_poses[i].push_back({filtered_state[0], filtered_state[1]});
 
-          //vec_poses[i].push_back({filtered_state[0], filtered_state[1]});
-
-          // Draw both the noisy input and the filtered state :
-          draw(image, measurements, filtered_state, predicted_state);
+            // Draw both the noisy input and the filtered state :
+            draw(image, measurements, filtered_state, predicted_state);
         }
 
-      // Show this stuff
-      cvShowImage("image",image);
-      printf("-----------------------------------------------------------------\n");
-      int k = cvWaitKey(20);
+        // Show this stuff
+        cvShowImage("image",image);
+        printf("-----------------------------------------------------------------\n");
+        int k = cvWaitKey(20);
 
-      if ((k == 27) || (k == 1048603))
-        break;
-      else if (k != -1)
-        printf("Key pressed : %d\n", k);
+        if ((k == 27) || (k == 1048603))
+            break;
+        else if (k != -1)
+            printf("Key pressed : %d\n", k);
     }
 
-
-  // Close everything and leave
-  cvReleaseImage(&image);
-  for (int i=0; i<n_targets; ++i) {
-      delete motion_estimators[i];
-    }
-
-    */
+    // Close everything and leave
+    cvReleaseImage(&image);
     return 1;
 }

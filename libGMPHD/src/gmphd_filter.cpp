@@ -114,7 +114,6 @@ void    GMPHD::extractTargets(float threshold)
 void    GMPHD::getTrackedTargets(const float extract_thld, vector<float> &position,
                                  vector<float> &speed, vector<float> &weight)
 {
-
     // Fill in "extracted_targets" from the "current_targets"
     extractTargets(extract_thld);
 
@@ -122,30 +121,19 @@ void    GMPHD::getTrackedTargets(const float extract_thld, vector<float> &positi
     speed.clear();
     weight.clear();
 
-    for (int i=0; i< _extracted_targets.m_gaussians.size(); ++i)
+    for (auto const & gaussian : _extracted_targets.m_gaussians)
     {
-        position.push_back(_extracted_targets.m_gaussians[i].m_mean(0,0));
-        position.push_back(_extracted_targets.m_gaussians[i].m_mean(1,0));
-        position.push_back(_extracted_targets.m_gaussians[i].m_mean(2,0));
+        for (int j=0; j<m_dimMeasures; ++j)
+        {
+            position.push_back(gaussian.m_mean(j,0));
+            speed.push_back(gaussian.m_mean(m_dimMeasures + j,0));
+        }
 
-        speed.push_back(_extracted_targets.m_gaussians[i].m_mean(3,0));
-        speed.push_back(_extracted_targets.m_gaussians[i].m_mean(4,0));
-        speed.push_back(_extracted_targets.m_gaussians[i].m_mean(5,0));
-
-        weight.push_back(_extracted_targets.m_gaussians[i].m_weight);
+        weight.push_back(gaussian.m_weight);
     }
 }
 
-/*!
- * \brief GmphdFilter::gaussDensity
- * \param point
- * \param mean
- * \param cov
- * \return
- *
- *  \warning : we only take the measure space into account for proximity measures !
- *
- */
+
 float   GMPHD::gaussDensity(MatrixXf const & point, MatrixXf const & mean, MatrixXf const & cov)
 {
     MatrixXf cov_inverse, mismatch;
