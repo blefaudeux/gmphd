@@ -81,7 +81,7 @@ public:
 
     void  setBirthModel(vector<GaussianModel> &_birth_model);
 
-    void  setSpawnModel(vector <SpawningModel, aligned_allocator<SpawningModel> > &_spawn_models);
+    void  setSpawnModel(vector <SpawningModel, aligned_allocator<SpawningModel> > &spawnModels);
 
 private:
     int   m_maxGaussians;
@@ -135,7 +135,7 @@ private:
      * \brief The spawning models (how gaussians spawn from existing targets)
      * Example : how airplanes take off from a carrier..
      */
-    vector <SpawningModel, aligned_allocator <SpawningModel> > _spawn_model;
+    vector <SpawningModel, aligned_allocator <SpawningModel> > m_spawnModels;
 
     /*!
      * \brief Build the update components

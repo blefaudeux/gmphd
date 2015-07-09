@@ -242,7 +242,7 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
     return merged_model;
 }
 
-void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, int max_gaussians)
+void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, unsigned int max_gaussians)
 {
     // Sort the gaussians mixture, ascending order
     qsort ();
@@ -272,9 +272,7 @@ void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, int
         {
             // - Select all the gaussians close enough, to merge if needed
             i_close_to_best.clear();
-            selectCloseGaussians (i_best,
-                                  merge_threshold,
-                                  i_close_to_best);
+            selectCloseGaussians (i_best, merge_threshold, i_close_to_best);
 
             // - Build a new merged gaussian
             i_close_to_best.push_back (i_best); // Add the initial gaussian

@@ -55,9 +55,6 @@ endif()
 file(GLOB SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB HEADERS ${PROJECT_SOURCE_DIR}/headers/*.h)
 
-MESSAGE("Cpp files : \n ${SRC}\n")
-MESSAGE("H files : \n ${HEADERS}\n")
-
 # Make sure the linker can find the GMPHD library once it is built. 
 set(LIBGMPHD_BINARY_DIR ${PROJECT_SOURCE_DIR}/../libGMPHD/lib)
 

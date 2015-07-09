@@ -57,7 +57,7 @@ class GaussianMixture {
 
         void print();
 
-        void prune(float  trunc_threshold, float  merge_threshold, int    max_gaussians);
+        void prune(float  trunc_threshold, float  merge_threshold, unsigned int max_gaussians);
 
         void qsort();
 

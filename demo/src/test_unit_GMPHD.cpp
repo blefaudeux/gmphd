@@ -2,18 +2,24 @@
 #include <highgui.h>
 #include "gmphd_filter.h"
 
-void draw(IplImage *image,
-          const float *measurements,
-          const float *filtered_state,
-          const float *predicted_state) {
+struct pos
+{
+    pos()
+    {
+        m_x = 0.f;
+        m_y = 0.f;
+    }
 
-    cvDrawCircle(image,cvPoint(measurements[0],measurements[1]),2,cvScalar(0,0,255),2);
-    cvDrawCircle(image,cvPoint(filtered_state[0],filtered_state[1]),2,cvScalar(0,255,0),2);
+    float m_x;
+    float m_y;
+};
 
-    // Show the predicted motion vector (?)
-    cvDrawLine(image, cvPoint(filtered_state[0],filtered_state[1]), cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
+
+bool isTargetVisible( float probaDetection )
+{
+    int const maxRand = probaDetection * RAND_MAX;
+    return rand() < maxRand;
 }
-
 
 int main() {
 
@@ -26,43 +32,65 @@ int main() {
 
     IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
-    // Instanciate the motion filters
     GMPHD targetTracking(n_targets, 2);
 
     // Track the circling targets
-    float measurements[6] = {0,0,0,0,0,0};
+    std::vector<float> targetEstimPosition, targetEstimSpeed, targetEstimWeight;
+    std::vector<float> targetMeasPosition, targetMeasSpeed;
 
-    std::vector<float> targetPosition, targetSpeed, targetWeight;
+    std::vector<pos> previousPoses(n_targets);
+    float measurements[4];
+
+    bool targetVisible = false;
 
     for(;;angle += 0.01) {
         cvZero(image);
 
-        // Get all the predicted targets
-        targetTracking.propagate();
-        targetTracking.getTrackedTargets(0.2f, targetPosition, targetSpeed, targetWeight );
+        // Create a new measurement vector
+        targetMeasPosition.clear();
+        targetMeasSpeed.clear();
 
-        // Create a new measurement, and do the update
-        for (unsigned int i=0; i< n_targets; ++i) {
-            // Update the state with a new noisy measurement :
-            measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
-            measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
+        for (unsigned int i=0; i< n_targets; ++i)
+        {
+            // For each target, randomly visible or not
+            targetVisible = isTargetVisible(0.5);
 
-            // Define a new 'speed' measurement
-            measurements[3] = measurements[0] - previous_state[0];
-            measurements[4] = measurements[1] - previous_state[1];
+            if( targetVisible )
+            {
+                // Update the state with a new noisy measurement :
+                measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
+                measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
 
-            motion_estimators[i]->update(measurements);
+                targetMeasPosition.push_back( measurements[0]);
+                targetMeasPosition.push_back( measurements[1]);
 
-            // Get the filtered state :
-            motion_estimators[i]->getLatestState(filtered_state);
+                // Define a new 'speed' measurement
+                targetMeasSpeed.push_back( measurements[0] - previousPoses[i].m_x);
+                targetMeasSpeed.push_back( measurements[1] - previousPoses[i].m_y);
 
-            //vec_poses[i].push_back({filtered_state[0], filtered_state[1]});
-
-            // Draw both the noisy input and the filtered state :
-            draw(image, measurements, filtered_state, predicted_state);
+                previousPoses[i].m_x = measurements[0];
+                previousPoses[i].m_y = measurements[1];
+            }
         }
 
-        // Show this stuff
+        // Update the tracker
+        targetTracking.setNewMeasurements( targetMeasPosition, targetMeasSpeed );
+
+        // Get all the predicted targets
+        targetTracking.propagate();
+        targetTracking.getTrackedTargets(0.2f, targetEstimPosition, targetEstimSpeed, targetEstimWeight );
+
+        // Show our drawing
+        for ( unsigned int i=0; i<targetMeasPosition.size(); i+=2)
+        {
+            cvDrawCircle(image,cvPoint(targetMeasPosition[i], targetMeasPosition[i+1]), 2, cvScalar(0,0,255),2);
+        }
+
+        for ( unsigned int i=0; i<targetEstimPosition.size(); i+=2)
+        {
+            cvDrawCircle(image,cvPoint(targetEstimPosition[i], targetEstimPosition[i+1]), 2, cvScalar(0,0,255),2);
+        }
+
         cvShowImage("image",image);
         printf("-----------------------------------------------------------------\n");
         int k = cvWaitKey(20);
@@ -77,3 +105,4 @@ int main() {
     cvReleaseImage(&image);
     return 1;
 }
+
