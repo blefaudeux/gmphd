@@ -12,8 +12,9 @@ bool compareIndex(index_w & first, index_w & second )
      return first.m_weight > second.m_weight;
 }
 
-GaussianMixture::GaussianMixture()
+GaussianMixture::GaussianMixture( int dim)
 {
+    m_dim = dim;
     m_gaussians.clear ();
 }
 
@@ -57,6 +58,7 @@ void  GaussianMixture::qsort () {
 
     sorted_gaussians.resize(m_gaussians.size ());
     i = 0;
+
     while ( !gauss_list.empty ())
     {
         item = gauss_list.front ();
@@ -176,14 +178,14 @@ void GaussianMixture::changeReferential(const Matrix4f *tranform)
 
 GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merge, bool b_remove_from_mixture)
 {
-    GaussianModel merged_model;
+    GaussianModel merged_model( m_gaussians[0].m_dim );
 
     Matrix<float, 6,1> diff;
 
     if (i_gaussians_to_merge.size() > 1)
     {
         // Reset the destination
-        merged_model.reset ();
+        merged_model.clear ();
 
         // Build merged gaussian :
         // - weight is the sum of all weights
@@ -253,10 +255,10 @@ void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, uns
     vector<int> i_close_to_best;
     vector<GaussianModel>::iterator position;
 
-    GaussianMixture pruned_targets;
-    GaussianModel merged_gaussian;
+    GaussianMixture pruned_targets(m_dim);
+    GaussianModel merged_gaussian(m_dim);
 
-    merged_gaussian.reset();
+    merged_gaussian.clear();
     pruned_targets.m_gaussians.clear();
 
     while ( (!m_gaussians.empty()) && (pruned_targets.m_gaussians.size () < max_gaussians) && !b_finished )

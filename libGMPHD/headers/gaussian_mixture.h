@@ -20,21 +20,41 @@ struct index_w {
 };
 
 /*!
- * \brief The gaussian_model struct for 3D targets & measurements -> 6D dimension
+ * \brief The gaussian_model struct for 3D targets & measurements -> 6 dimension
  */
 struct GaussianModel
 {
-        void reset()
+        GaussianModel(int dim=2): // FIXME: Ben - This is nasty, won't work for long
+            m_dim(dim)
         {
-            m_mean = MatrixXf::Zero(6,1);
-            m_cov  = MatrixXf::Identity(6,6);
+            clear();
+        }
+
+        GaussianModel & operator=(const GaussianModel & rhs)
+        {
+            if( this != &rhs )
+            {
+                m_mean = rhs.m_mean;
+                m_cov = rhs.m_cov;
+                m_dim = rhs.m_dim;
+                m_weight = rhs.m_weight;
+            }
+
+            return *this;
+        }
+
+        void clear()
+        {
+            m_mean = MatrixXf::Zero(m_dim * 2,1);
+            m_cov  = MatrixXf::Identity( m_dim * 2, m_dim * 2);
             m_weight = 0.f;
         }
 
-        Matrix<float, 6,1, DontAlign> m_mean;
-        Matrix<float, 6,6, DontAlign> m_cov;
-
+        int m_dim;
         float m_weight;
+
+        MatrixXf m_mean;
+        MatrixXf m_cov;
 };
 
 /*!
@@ -43,7 +63,7 @@ struct GaussianModel
  */
 class GaussianMixture {
     public :
-        GaussianMixture();
+        GaussianMixture(int dim = 2);
 
         GaussianMixture(const GaussianMixture &source);
 
@@ -69,6 +89,7 @@ class GaussianMixture {
 
     public:
         vector <GaussianModel> m_gaussians;
+        int m_dim;
 
 };
 

@@ -21,6 +21,34 @@ bool isTargetVisible( float probaDetection )
     return rand() < maxRand;
 }
 
+void initTargetTracking( GMPHD * tracker )
+{
+    // Birth model (spawn)
+    vector<GaussianModel> Birth(1);
+    tracker->setBirthModel( Birth );
+
+    // Dynamics (motion model)
+    tracker->setDynamicsModel( 1.f, 10.f );
+
+    // Detection model
+    float probDetection = 0.5f;
+    float measNoisePose = 2.f;
+    float measNoiseSpeed = 2.f;
+    float measBackground = 1.f;
+    tracker->setObservationModel( probDetection, measNoisePose, measNoiseSpeed, measBackground);
+
+    // Pruning parameters
+    tracker->setPruningParameters( 0.2f, 2.f, 10);
+
+    // Spawn (target apparition)
+    vector<SpawningModel> spawnModel(1);
+    tracker->setSpawnModel(spawnModel);
+
+    // Survival over time
+    tracker->setSurvivalProbability(0.95f);
+}
+
+
 int main() {
 
     // Deal with the OpenCV window..
@@ -32,7 +60,8 @@ int main() {
 
     IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
-    GMPHD targetTracking(n_targets, 2);
+    GMPHD targetTracker( n_targets, 2, true );
+    initTargetTracking( &targetTracker );
 
     // Track the circling targets
     std::vector<float> targetEstimPosition, targetEstimSpeed, targetEstimWeight;
@@ -74,11 +103,11 @@ int main() {
         }
 
         // Update the tracker
-        targetTracking.setNewMeasurements( targetMeasPosition, targetMeasSpeed );
+        targetTracker.setNewMeasurements( targetMeasPosition, targetMeasSpeed );
 
         // Get all the predicted targets
-        targetTracking.propagate();
-        targetTracking.getTrackedTargets(0.2f, targetEstimPosition, targetEstimSpeed, targetEstimWeight );
+        targetTracker.propagate();
+        targetTracker.getTrackedTargets(0.2f, targetEstimPosition, targetEstimSpeed, targetEstimWeight );
 
         // Show our drawing
         for ( unsigned int i=0; i<targetMeasPosition.size(); i+=2)

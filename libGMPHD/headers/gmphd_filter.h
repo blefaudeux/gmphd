@@ -15,11 +15,24 @@ using namespace Eigen;
  */
 struct SpawningModel {
 
-    Matrix<float, 6,6> m_trans; // Transition matrix
-    Matrix<float, 6,6> m_cov;
-    Matrix<float, 6,1> m_offset;
+    SpawningModel(int dim = 2):
+        m_dim(dim)
+    {
+        m_state = m_dim * 2;
+        m_trans = MatrixXf::Ones(m_state, m_state);
+        m_cov = MatrixXf::Ones(m_state, m_state);
+        m_offset = MatrixXf::Zero(m_state,1);
+        m_weight = 0.1f;
+    }
+
+    int m_dim;
+    int m_state;
 
     float m_weight;
+
+    MatrixXf m_trans;
+    MatrixXf m_cov;
+    MatrixXf m_offset;
 };
 
 
@@ -59,8 +72,8 @@ public:
 
     void  setNewReferential(const Matrix4f *transform);
 
-    void  setNewMeasurements(vector<float> &position,
-                             vector<float> &speed);
+    void  setNewMeasurements(const vector<float> &position,
+                             const vector<float> &speed);
 
     void  setDynamicsModel(float _sampling,
                            float m_processNoise);
@@ -79,9 +92,9 @@ public:
                                float  prune_merge_thld,
                                int    prune_max_nb);
 
-    void  setBirthModel(vector<GaussianModel> &_birth_model);
+    void  setBirthModel(vector<GaussianModel> &m_birthModel);
 
-    void  setSpawnModel(vector <SpawningModel, aligned_allocator<SpawningModel> > &spawnModels);
+    void  setSpawnModel(vector<SpawningModel> &spawnModels);
 
 private:
     int   m_maxGaussians;
@@ -108,28 +121,29 @@ private:
 
     vector<int> m_iBirthTargets;
 
-    MatrixXf  _tgt_dyn_transitions;
-    MatrixXf  _tgt_dyn_covariance;
+    MatrixXf  m_tgtDynTrans;
+    MatrixXf  m_tgtDynCov;
 
-    MatrixXf  _obs_matrix;
-    MatrixXf  _obs_matrix_T;
-    MatrixXf  _obs_covariance;
+    MatrixXf  m_obsMat;
+    MatrixXf  m_obsMatT;
+    MatrixXf  m_obsCov;
 
     MatrixXf I;
 
     // Temporary matrices, used for the update process
-    vector <MatrixXf, aligned_allocator <MatrixXf> > _covariance;
-    vector <MatrixXf, aligned_allocator <MatrixXf> > _expected_measure;
-    vector <MatrixXf, aligned_allocator <MatrixXf> > _expected_dispersion;
-    vector <MatrixXf, aligned_allocator <MatrixXf> > _uncertainty;
+    vector <MatrixXf, aligned_allocator <MatrixXf> > m_covariance;
+    vector <MatrixXf, aligned_allocator <MatrixXf> > m_expMeasure;
+    vector <MatrixXf, aligned_allocator <MatrixXf> > m_expDisp;
+    vector <MatrixXf, aligned_allocator <MatrixXf> > m_uncertainty;
 
-    GaussianMixture _birth_model;
-    GaussianMixture _birth_targets;
-    GaussianMixture _current_targets;
-    GaussianMixture _expected_targets;
-    GaussianMixture _extracted_targets;
-    GaussianMixture _meas_targets;
-    GaussianMixture _spawned_targets;
+    GaussianMixture m_birthModel;
+
+    GaussianMixture m_birthTargets;
+    GaussianMixture m_currTargets;
+    GaussianMixture m_expTargets;
+    GaussianMixture m_extractedTargets;
+    GaussianMixture m_measTargets;
+    GaussianMixture m_spawnTargets;
 
     /*!
      * \brief The spawning models (how gaussians spawn from existing targets)
