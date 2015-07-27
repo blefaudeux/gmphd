@@ -18,7 +18,7 @@ GaussianMixture::GaussianMixture( int dim)
     m_gaussians.clear ();
 }
 
-GaussianMixture::GaussianMixture( vector<GaussianModel> const & source)
+GaussianMixture::GaussianMixture(const vector<GaussianModel> & source)
 {
     m_gaussians = source;
     m_dim = source[0].m_dim;

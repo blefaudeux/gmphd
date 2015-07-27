@@ -171,7 +171,7 @@ void  GMPHD::predictBirth()
 
   // -----------------------------------------
   // Compute spawned targets
-  GaussianModel new_spawn;
+  GaussianModel new_spawn(m_dimState);
 
   for( auto const & curr : m_currTargets->m_gaussians )
   {
@@ -196,7 +196,7 @@ void  GMPHD::predictBirth()
 }
 
 void  GMPHD::predictTargets () {
-  GaussianModel new_target;
+  GaussianModel new_target(m_dimState);
 
   m_expTargets->m_gaussians.clear();
   m_expTargets->m_gaussians.reserve( m_currTargets->m_gaussians.size () );
@@ -348,7 +348,7 @@ void  GMPHD::setNewMeasurements(vector<float> const & position,
   // Clear the gaussian mixture
   m_measTargets->m_gaussians.clear();
 
-  GaussianModel new_obs(m_dimMeasures);
+  GaussianModel new_obs(m_dimState);
 
   unsigned int iTarget = 0;
 

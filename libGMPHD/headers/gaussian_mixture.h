@@ -21,7 +21,7 @@ struct index_w {
 
 struct GaussianModel
 {
-        GaussianModel(int dim=4): // FIXME: Ben - This is nasty, won't work for long
+        GaussianModel(int dim=4): //Ben - fixme, define this as a template argument !
             m_dim(dim)
         {
             clear();
@@ -42,8 +42,8 @@ struct GaussianModel
 
         void clear()
         {
-            m_mean = MatrixXf::Zero(m_dim * 2,1);
-            m_cov  = MatrixXf::Identity( m_dim * 2, m_dim * 2);
+            m_mean = MatrixXf::Zero(m_dim,1);
+            m_cov  = MatrixXf::Identity( m_dim, m_dim);
             m_weight = 0.f;
         }
 

@@ -13,7 +13,7 @@ bool isTargetVisible( float probaDetection )
 void initTargetTracking( GMPHD & tracker )
 {
   // Birth model (spawn)
-  GaussianModel Birth(2);
+  GaussianModel Birth(4);
   Birth.m_weight = 0.2f;
   Birth.m_mean(0,0) = 400.f;
   Birth.m_mean(1,0) = 400.f;
@@ -115,7 +115,7 @@ int main() {
 
     for ( unsigned int i=0; i<targetEstimPosition.size(); i+=2)
     {
-      cvDrawCircle(image,cvPoint(targetEstimPosition[i], targetEstimPosition[i+1]), 2, cvScalar(0,0,255),2);
+      cvDrawCircle(image,cvPoint(targetEstimPosition[i], targetEstimPosition[i+1]), 2, cvScalar(200,0,200),2);
     }
 
     cvShowImage("image",image);
