@@ -18,7 +18,13 @@ GaussianMixture::GaussianMixture( int dim)
     m_gaussians.clear ();
 }
 
-GaussianMixture::GaussianMixture( GaussianMixture const &source)
+GaussianMixture::GaussianMixture( vector<GaussianModel> const & source)
+{
+    m_gaussians = source;
+    m_dim = source[0].m_dim;
+}
+
+GaussianMixture::GaussianMixture( GaussianMixture const & source)
 {
     m_gaussians = source.m_gaussians;
 }
@@ -139,7 +145,7 @@ void GaussianMixture::print()
     }
 }
 
-void GaussianMixture::changeReferential(const Matrix4f *tranform)
+void GaussianMixture::changeReferential( Matrix4f const & transform)
 {
     Matrix<float, 4,1> temp_vec;
     Matrix<float, 4,1> temp_vec_new;
@@ -158,14 +164,14 @@ void GaussianMixture::changeReferential(const Matrix4f *tranform)
         // Change positions
         temp_vec.block(0,0, 3,1) = gaussian.m_mean.block(0,0,3,1);
 
-        temp_vec_new = *tranform * temp_vec;
+        temp_vec_new = transform * temp_vec;
 
         gaussian.m_mean.block(0,0,3,1) = temp_vec_new.block(0,0,3,1);
 
         // Change speeds referential
         temp_vec.block(0,0, 3,1) = gaussian.m_mean.block(3,0,3,1);
 
-        temp_vec_new = *tranform * temp_vec;
+        temp_vec_new = transform * temp_vec;
 
         gaussian.m_mean.block(3,0,3,1) = temp_vec_new.block(0,0,3,1);
 
@@ -180,7 +186,7 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
 {
     GaussianModel merged_model( m_gaussians[0].m_dim );
 
-    Matrix<float, 6,1> diff;
+    MatrixXf diff(m_dim, 1);
 
     if (i_gaussians_to_merge.size() > 1)
     {
@@ -206,7 +212,7 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
 
         // - covariance is related to initial gaussian model cov and the discrepancy
         // from merged m_mean position and every merged gaussian pose
-        merged_model.m_cov.setZero(6,6);
+        merged_model.m_cov.setZero(m_dim, m_dim);
         for (auto const & i_g : i_gaussians_to_merge)
         {
             diff = merged_model.m_mean - m_gaussians[i_g].m_mean;

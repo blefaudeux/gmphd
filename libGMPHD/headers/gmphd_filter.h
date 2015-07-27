@@ -5,7 +5,8 @@
 
 
 #include "gaussian_mixture.h"
-#include  <iostream>
+#include <iostream>
+#include <memory>
 
 using namespace std;
 using namespace Eigen;
@@ -15,26 +16,27 @@ using namespace Eigen;
  */
 struct SpawningModel {
 
-    SpawningModel(int dim = 2):
-        m_dim(dim)
-    {
-        m_state = m_dim * 2;
-        m_trans = MatrixXf::Ones(m_state, m_state);
-        m_cov = MatrixXf::Ones(m_state, m_state);
-        m_offset = MatrixXf::Zero(m_state,1);
-        m_weight = 0.1f;
-    }
+  SpawningModel(int dim = 2):
+    m_dim(dim)
+  {
+    m_state = m_dim * 2;
+    m_trans = MatrixXf::Ones(m_state, m_state);
+    m_cov = MatrixXf::Ones(m_state, m_state);
+    m_offset = MatrixXf::Zero(m_state,1);
+    m_weight = 0.1f;
+  }
 
-    int m_dim;
-    int m_state;
+  int m_dim;
+  int m_state;
 
-    float m_weight;
+  float m_weight;
 
-    MatrixXf m_trans;
-    MatrixXf m_cov;
-    MatrixXf m_offset;
+  MatrixXf m_trans;
+  MatrixXf m_cov;
+  MatrixXf m_offset;
 };
 
+typedef uint uint;
 
 /*!
  * \brief The gmphd_filter class
@@ -42,175 +44,166 @@ struct SpawningModel {
 class GMPHD
 {
 public:
-    /*!
-     * \brief GmphdFilter
-     * \param max_gaussians : max number of evaluated targets
-     * \param dimension     : dimension of the measurement vector
-     * \param motion_model  : intrinsic (constant speed) motion model
-     * \param verbose       : print debug
-     */
-    GMPHD(int max_gaussians,
-                int dimension,
-                bool motion_model = false,
-                bool verbose = false);
+  GMPHD(int max_gaussians, int dimension,
+        bool motion_model = false, bool verbose = false);
 
-    /*!
-     * \brief getTrackedTargets
-     * \param positions
-     * \param speed
-     */
-    void  getTrackedTargets(const float extract_thld,
-                            vector<float> &position,
-                            vector<float> &speed,
-                            vector<float> &weight);
+  bool isInitialized();
 
-    void  print();
+  // Input: raw measurements and possible ref change
+  void  setNewReferential( Matrix4f const & transform);
 
-    void  propagate();
+  void  setNewMeasurements( vector<float> const & position, vector<float> const & speed);
 
-    void  reset();
+  // Output
+  void  getTrackedTargets( vector<float> & position, vector<float> & speed, vector<float> & weight,
+                           float const & extract_thld );
 
-    void  setNewReferential(const Matrix4f *transform);
+  // Parameters to set before use
+  void  setDynamicsModel( float sampling, float processNoise );
 
-    void  setNewMeasurements(const vector<float> &position,
-                             const vector<float> &speed);
+  void  setDynamicsModel( MatrixXf const & tgt_dyn_transitions, MatrixXf const & tgt_dyn_covariance);
 
-    void  setDynamicsModel(float _sampling,
-                           float m_processNoise);
+  void  setSurvivalProbability(float _prob_survival);
 
-    void setDynamicsModel(MatrixXf &tgt_dyn_transitions,
-                          MatrixXf &tgt_dyn_covariance);
+  void  setObservationModel(float probDetectionOverall, float m_measNoisePose,
+                            float m_measNoiseSpeed, float m_measNoiseBackground );
 
-    void  setSurvivalProbability(float _prob_survival);
+  void  setPruningParameters(float  prune_trunc_thld, float  prune_merge_thld,
+                             int    prune_max_nb);
 
-    void  setObservationModel(float _prob_detection_overall,
-                              float m_measNoisePose,
-                              float m_measNoiseSpeed,
-                              float m_measNoiseBackground);
+  void  setBirthModel(vector<GaussianModel> & m_birthModel);
 
-    void  setPruningParameters(float  prune_trunc_thld,
-                               float  prune_merge_thld,
-                               int    prune_max_nb);
+  void  setSpawnModel(vector<SpawningModel> & spawnModels);
 
-    void  setBirthModel(vector<GaussianModel> &m_birthModel);
+  // Auxiliary functions
+  void  print();
 
-    void  setSpawnModel(vector<SpawningModel> &spawnModels);
+  void  propagate();
+
+  void  reset();
 
 private:
-    int   m_maxGaussians;
-    int   m_dimMeasures;
-    bool  m_motionModel;
-    bool  m_bVerbose;
-    int   m_dimState;
-    int   m_nPredictedTargets;
-    int   m_nCurrentTargets;
-    int   m_nMaxPrune;
-
-    float m_pSurvival;
-    float m_pDetection;
-
-    float m_samplingPeriod;
-    float m_processNoise;
-
-    float m_pruneMergeThld;
-    float m_pruneTruncThld;
-
-    float m_measNoisePose;
-    float m_measNoiseSpeed;
-    float m_measNoiseBackground; // Background detection "noise", other models are possible..
-
-    vector<int> m_iBirthTargets;
-
-    MatrixXf  m_tgtDynTrans;
-    MatrixXf  m_tgtDynCov;
-
-    MatrixXf  m_obsMat;
-    MatrixXf  m_obsMatT;
-    MatrixXf  m_obsCov;
-
-    MatrixXf I;
-
-    // Temporary matrices, used for the update process
-    vector <MatrixXf, aligned_allocator <MatrixXf> > m_covariance;
-    vector <MatrixXf, aligned_allocator <MatrixXf> > m_expMeasure;
-    vector <MatrixXf, aligned_allocator <MatrixXf> > m_expDisp;
-    vector <MatrixXf, aligned_allocator <MatrixXf> > m_uncertainty;
-
-    GaussianMixture m_birthModel;
-
-    GaussianMixture m_birthTargets;
-    GaussianMixture m_currTargets;
-    GaussianMixture m_expTargets;
-    GaussianMixture m_extractedTargets;
-    GaussianMixture m_measTargets;
-    GaussianMixture m_spawnTargets;
-
-    /*!
+  /*!
      * \brief The spawning models (how gaussians spawn from existing targets)
      * Example : how airplanes take off from a carrier..
      */
-    vector <SpawningModel, aligned_allocator <SpawningModel> > m_spawnModels;
+  vector <SpawningModel, aligned_allocator <SpawningModel> > m_spawnModels;
 
-    /*!
-     * \brief Build the update components
-     */
-    void  buildUpdate();
+  void  buildUpdate();
+
+  void  extractTargets(float threshold);
+
+  void  predictBirth();
+
+  void  predictTargets();
+
+  void  pruneGaussians();
+
+  void  update();
 
 
-    /*!
-     * \brief gauss_density : multivariate normal distribution. We suppose cov matrix
-     * is definite positive, degenerate case is not dealt with.
-     * \param point
-     * \param mean
-     * \param cov
-     * \param res
-     */
-    float gaussDensity(const MatrixXf &point,
-                       const MatrixXf &mean,
-                       const MatrixXf &cov);
+private:
+  bool  m_motionModel;
+  bool  m_bVerbose;
 
-    /*!
-     * \brief gauss_density : multivariate normal distribution. We suppose cov matrix
-     * is definite positive, degenerate case is not dealt with.
-     * \param point
-     * \param mean
-     * \param cov
-     * \param res
-     */
-    float   gaussDensity_3D(const Matrix <float, 3,1> &point,
-                            const Matrix <float, 3,1> &mean,
-                            const Matrix <float, 3,3> &cov);
+  uint   m_maxGaussians;
+  uint   m_dimMeasures;
+  uint   m_dimState;
+  uint   m_nPredictedTargets;
+  uint   m_nCurrentTargets;
+  uint   m_nMaxPrune;
 
-    /*!
-     * \brief extractTargets :
-     */
-    void extractTargets(float threshold);
+  float m_pSurvival;
+  float m_pDetection;
 
-    /*!
-     * \brief Predict birth targets, meaning spontaneous births
-     * and spawned targets. Fills in
-     * - spawned_targets
-     * - birth-targets
-     */
-    void  predictBirth();
+  float m_samplingPeriod;
+  float m_processNoise;
 
-    /*!
-     * \brief Predict existing targets propagation.
-     * Fills in :
-     * - expected_targets
-     */
-    void  predictTargets();
+  float m_pruneMergeThld;
+  float m_pruneTruncThld;
 
-    /*!
-     * \brief Remove and merge gaussians, prune gaussian mixtures
-     */
-    void  pruneGaussians();
+  float m_measNoisePose;
+  float m_measNoiseSpeed;
+  float m_measNoiseBackground; // Background detection "noise", other models are possible..
 
-    /*!
-     * \brief Update the filter
-     */
-    void  update();
+  vector<uint> m_iBirthTargets;
 
+  MatrixXf  m_tgtDynTrans;
+  MatrixXf  m_tgtDynCov;
+
+  MatrixXf  m_obsMat;
+  MatrixXf  m_obsMatT;
+  MatrixXf  m_obsCov;
+
+  // Temporary matrices, used for the update process
+  vector <MatrixXf, aligned_allocator <MatrixXf> > m_covariance;
+  vector <MatrixXf, aligned_allocator <MatrixXf> > m_expMeasure;
+  vector <MatrixXf, aligned_allocator <MatrixXf> > m_expDisp;
+  vector <MatrixXf, aligned_allocator <MatrixXf> > m_uncertainty;
+
+  std::unique_ptr<GaussianMixture> m_birthModel;
+
+  std::unique_ptr<GaussianMixture> m_birthTargets;
+  std::unique_ptr<GaussianMixture> m_currTargets;
+  std::unique_ptr<GaussianMixture> m_expTargets;
+  std::unique_ptr<GaussianMixture> m_extractedTargets;
+  std::unique_ptr<GaussianMixture> m_measTargets;
+  std::unique_ptr<GaussianMixture> m_spawnTargets;
+
+private:
+
+  template <size_t D>
+  float mahalanobis(const Matrix <float, D,1> &point,
+                    const Matrix <float, D,1> &mean,
+                    const Matrix <float, D,D> &cov)
+  {
+      int ps = point.rows();
+      MatrixXf x_cen = point-mean;
+      MatrixXf b = MatrixXf::Identity(ps,ps);
+
+      // TODO: Ben - cov needs to be normalized !
+      cov.ldlt().solveInPlace(b);
+      x_cen = b*x_cen;
+      MatrixXf res = x_cen.transpose() * x_cen;
+      return res.sum();
+  }
+
+  template <size_t D>
+  float   gaussDensity(const Matrix <float, D,1> &point,
+                       const Matrix <float, D,1> &mean,
+                       const Matrix <float, D,D> &cov) const
+  {
+    float det, res;
+
+    Matrix <float, D, D> cov_inverse;
+    Matrix <float, D, 1> mismatch;
+
+    det = cov.determinant();
+    cov_inverse = cov.inverse();
+
+    mismatch = point - mean;
+
+    Matrix <float, 1, 1> distance = mismatch.transpose() * cov_inverse * mismatch;
+
+    distance /= -2.f;
+
+    // Deal with faulty determinant case
+    if (det == 0.f)
+    {
+      return 0.f;
+    }
+
+    res = 1.f/sqrt(pow(2*M_PI, D) * fabs(det)) * exp(distance.coeff (0,0));
+
+    if (isinf(det))
+    {
+      printf("Problem in multivariate gaussian\n distance : %f - det %f\n", distance.coeff (0,0), det);
+      cout << "Cov \n" << cov << endl << "Cov inverse \n" << cov_inverse << endl;
+      return 0.f;
+    }
+
+    return res;
+  }
 };
 
 #endif // GMPHD_FILTER_H

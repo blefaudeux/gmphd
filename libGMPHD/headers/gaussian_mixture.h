@@ -19,12 +19,9 @@ struct index_w {
         int   m_index;
 };
 
-/*!
- * \brief The gaussian_model struct for 3D targets & measurements -> 6 dimension
- */
 struct GaussianModel
 {
-        GaussianModel(int dim=2): // FIXME: Ben - This is nasty, won't work for long
+        GaussianModel(int dim=4): // FIXME: Ben - This is nasty, won't work for long
             m_dim(dim)
         {
             clear();
@@ -63,9 +60,11 @@ struct GaussianModel
  */
 class GaussianMixture {
     public :
-        GaussianMixture(int dim = 2);
+        GaussianMixture(int dim);
 
-        GaussianMixture(const GaussianMixture &source);
+        GaussianMixture( GaussianMixture const & source);
+
+        GaussianMixture( vector<GaussianModel> const & source );
 
         GaussianMixture operator=(const GaussianMixture &source);
 
@@ -85,7 +84,7 @@ class GaussianMixture {
 
         int selectBestGaussian();
 
-        void changeReferential(const Matrix4f *tranform);
+        void changeReferential(const Matrix4f & transform);
 
     public:
         vector <GaussianModel> m_gaussians;
