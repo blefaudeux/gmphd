@@ -13,7 +13,7 @@ bool isTargetVisible( float probaDetection )
 void initTargetTracking( GMPHD & tracker )
 {
   // Birth model (spawn)
-  GaussianModel Birth(4);
+  GaussianModel Birth(2);
   Birth.m_weight = 0.2f;
   Birth.m_mean(0,0) = 400.f;
   Birth.m_mean(1,0) = 400.f;

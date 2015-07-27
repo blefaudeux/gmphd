@@ -17,10 +17,10 @@ GMPHD::GMPHD(int max_gaussians, int dimension, bool motion_model, bool verbose):
 
   // Initialize all gaussian mixtures, we know the dimension now
   m_measTargets.reset( new GaussianMixture(m_dimState) );
+  m_birthTargets.reset( new GaussianMixture(m_dimState) );
   m_currTargets.reset( new GaussianMixture(m_dimState) );
   m_expTargets.reset( new GaussianMixture(m_dimState) );
   m_extractedTargets.reset( new GaussianMixture(m_dimState) );
-  m_measTargets.reset( new GaussianMixture(m_dimState) );
   m_spawnTargets.reset( new GaussianMixture(m_dimState) );
 }
 
@@ -348,7 +348,7 @@ void  GMPHD::setNewMeasurements(vector<float> const & position,
   // Clear the gaussian mixture
   m_measTargets->m_gaussians.clear();
 
-  GaussianModel new_obs;
+  GaussianModel new_obs(m_dimMeasures);
 
   unsigned int iTarget = 0;
 
