@@ -1,3 +1,11 @@
+/*
+ * Benjamin Lefaudeux (blefaudeux@github)
+ * Very basic example of a gmphd usecase, tracking moving targets on a 2D plane
+ * whose measurement is polluted by random noise (both in terms of position and
+ * detection probability). Rendering is pretty much as basic as it gets,
+ * but you get the point
+ */
+
 #include <cv.h>
 #include <highgui.h>
 #include "gmphd_filter.h"
@@ -10,6 +18,8 @@ bool isTargetVisible( float probaDetection )
   return rand() < maxRand;
 }
 
+
+// Init the Gaussian Mixture Probability Hypothesis Density filter
 void initTargetTracking( GMPHD & tracker )
 {
   // Birth model (spawn)
@@ -49,6 +59,27 @@ void initTargetTracking( GMPHD & tracker )
   tracker.isInitialized();
 }
 
+bool display( vector<float> const& targetMeasures,
+              vector<float> const & targetFilter,
+              IplImage & pict )
+{
+  for ( auto tgt = targetMeasures.begin(); tgt != targetMeasures.end(); tgt++)
+  {
+    cvDrawCircle(&pict, cvPoint(*tgt, *(tgt++)), 2, cvScalar(0,0,255),2);
+  }
+
+  for ( auto tgt = targetFilter.begin(); tgt!= targetFilter.end(); tgt++)
+  {
+    cvDrawCircle(&pict, cvPoint(*tgt, *(tgt++)), 2, cvScalar(200,0,200),2);
+  }
+
+  cvShowImage("Filtering results", &pict);
+
+  printf("-----------------------------------------------------------------\n");
+  int const k = cvWaitKey(100);
+  return (k != 27) && (k != 1048603);
+}
+
 
 int main() {
 
@@ -75,23 +106,21 @@ int main() {
   {
     cvZero(image);
 
-    // Create a new measurement vector
     targetMeasPosition.clear();
     targetMeasSpeed.clear();
 
     for (unsigned int i=0; i< n_targets; ++i)
     {
       // For each target, randomly visible or not
+      // Make up noisy measurements
       if( isTargetVisible(detectionProbability) )
       {
-        // Update the state with a new noisy measurement :
         measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
         measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
 
         targetMeasPosition.push_back( measurements[0]);
         targetMeasPosition.push_back( measurements[1]);
 
-        // Define a new 'speed' measurement
         targetMeasSpeed.push_back( measurements[0] - previousPoses[i].first);
         targetMeasSpeed.push_back( measurements[1] - previousPoses[i].second);
 
@@ -108,27 +137,12 @@ int main() {
     targetTracker.getTrackedTargets( targetEstimPosition, targetEstimSpeed, targetEstimWeight, 0.2f );
 
     // Show our drawing
-    for ( unsigned int i=0; i<targetMeasPosition.size(); i+=2)
+    if(!display( targetMeasPosition, targetEstimPosition, *image ))
     {
-      cvDrawCircle(image,cvPoint(targetMeasPosition[i], targetMeasPosition[i+1]), 2, cvScalar(0,0,255),2);
-    }
-
-    for ( unsigned int i=0; i<targetEstimPosition.size(); i+=2)
-    {
-      cvDrawCircle(image,cvPoint(targetEstimPosition[i], targetEstimPosition[i+1]), 2, cvScalar(200,0,200),2);
-    }
-
-    cvShowImage("image",image);
-    printf("-----------------------------------------------------------------\n");
-    int k = cvWaitKey(20);
-
-    if ((k == 27) || (k == 1048603))
       break;
-    else if (k != -1)
-      printf("Key pressed : %d\n", k);
+    }
   }
 
-  // Close everything and leave
   cvReleaseImage(&image);
   return 1;
 }
