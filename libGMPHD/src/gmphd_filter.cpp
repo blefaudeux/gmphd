@@ -40,14 +40,14 @@ void  GMPHD::buildUpdate ()
     }
 
     m_expTargets->m_gaussians.insert(m_expTargets->m_gaussians.end (), m_birthTargets->m_gaussians.begin (),
-                                    m_birthTargets->m_gaussians.begin () + m_birthTargets->m_gaussians.size ());
+                                     m_birthTargets->m_gaussians.begin () + m_birthTargets->m_gaussians.size ());
   }
 
   // - spawned targets
   if (m_spawnTargets->m_gaussians.size () > 0)
   {
     m_expTargets->m_gaussians.insert( m_expTargets->m_gaussians.end (), m_spawnTargets->m_gaussians.begin (),
-                                     m_spawnTargets->m_gaussians.begin () + m_spawnTargets->m_gaussians.size ());
+                                      m_spawnTargets->m_gaussians.begin () + m_spawnTargets->m_gaussians.size ());
   }
 
   if (m_bVerbose)
@@ -430,7 +430,7 @@ void  GMPHD::update()
 
   // We'll consider every possible association : vector size is (expected targets)*(measured targets)
   m_currTargets->m_gaussians.resize((m_measTargets->m_gaussians.size () + 1) *
-                                   m_expTargets->m_gaussians.size ());
+                                    m_expTargets->m_gaussians.size ());
 
   // First set of gaussians : mere propagation of existing ones
   // \warning : don't propagate the "birth" targets...
@@ -439,11 +439,15 @@ void  GMPHD::update()
   m_nPredictedTargets =  m_expTargets->m_gaussians.size ();
   int i_birth_current = 0;
 
-  for (unsigned int i=0; i<m_nPredictedTargets; ++i) {
-    if (i != m_iBirthTargets[i_birth_current]) {
+  for (unsigned int i=0; i<m_nPredictedTargets; ++i)
+  {
+    if (i != m_iBirthTargets[i_birth_current])
+    {
       m_currTargets->m_gaussians[i].m_weight = (1.f - m_pDetection) *
-                                              m_expTargets->m_gaussians[i].m_weight;
-    } else {
+                                               m_expTargets->m_gaussians[i].m_weight;
+    }
+    else
+    {
       i_birth_current = min(i_birth_current+1, (int) m_iBirthTargets.size ());
       m_currTargets->m_gaussians[i].m_weight = 0.f;
     }
@@ -458,40 +462,29 @@ void  GMPHD::update()
   {
     return;
   }
-  else
+
+  for (n_meas=1; n_meas <= m_measTargets->m_gaussians.size (); ++n_meas)
   {
-    for (n_meas=1; n_meas <= m_measTargets->m_gaussians.size (); ++n_meas)
+    for (n_targt = 0; n_targt < m_nPredictedTargets; ++n_targt)
     {
-      for (n_targt = 0; n_targt < m_nPredictedTargets; ++n_targt)
-      {
-        index = n_meas * m_nPredictedTargets + n_targt;
+      index = n_meas * m_nPredictedTargets + n_targt;
 
-        // Compute matching factor between predictions and measures.
-        // \warning : we only take positions into account there
-//        m_currTargets->m_gaussians[index].m_weight =  m_pDetection *
-//                                                     m_expTargets->m_gaussians[n_targt].m_weight *
-//                                                     gaussDensity<2>(m_measTargets->m_gaussians[n_meas -1].m_mean.block(0,0,m_dimMeasures,1),
-//            m_expMeasure[n_targt].block(0,0,m_dimMeasures,1),
-//            m_expDisp[n_targt].block(0,0, m_dimMeasures, m_dimMeasures));
-
-        m_currTargets->m_gaussians[index].m_weight =  m_pDetection *
-                                                     m_expTargets->m_gaussians[n_targt].m_weight /
-                                                     mahalanobis<2>( m_measTargets->m_gaussians[n_meas -1].m_mean.block(0,0,m_dimMeasures,1),
-            m_expMeasure[n_targt].block(0,0,m_dimMeasures,1),
-            m_expDisp[n_targt].block(0,0, m_dimMeasures, m_dimMeasures));
+      // Compute matching factor between predictions and measures.
+      m_currTargets->m_gaussians[index].m_weight =  m_pDetection * m_expTargets->m_gaussians[n_targt].m_weight /
+                                                    mahalanobis<2>( m_measTargets->m_gaussians[n_meas -1].m_mean.block(0,0,m_dimMeasures,1),
+          m_expMeasure[n_targt].block(0,0,m_dimMeasures,1),
+          m_expDisp[n_targt].block(0,0, m_dimMeasures, m_dimMeasures));
 
 
-        m_currTargets->m_gaussians[index].m_mean =  m_expTargets->m_gaussians[n_targt].m_mean +
-                                                   m_uncertainty[n_targt] *
-                                                   (m_measTargets->m_gaussians[n_meas -1].m_mean - m_expMeasure[n_targt]);
+      m_currTargets->m_gaussians[index].m_mean =  m_expTargets->m_gaussians[n_targt].m_mean +
+                                                  m_uncertainty[n_targt] * (m_measTargets->m_gaussians[n_meas -1].m_mean - m_expMeasure[n_targt]);
 
-        m_currTargets->m_gaussians[index].m_cov = m_covariance[n_targt];
-      }
-
-      // Normalize weights in the same predicted set,
-      // taking clutter into account
-      m_currTargets->normalize (m_measNoiseBackground, n_meas * m_nPredictedTargets,
-                               (n_meas + 1) * m_nPredictedTargets, 1);
+      m_currTargets->m_gaussians[index].m_cov = m_covariance[n_targt];
     }
+
+    // Normalize weights in the same predicted set,
+    // taking clutter into account
+    m_currTargets->normalize (m_measNoiseBackground, n_meas * m_nPredictedTargets,
+                              (n_meas + 1) * m_nPredictedTargets, 1);
   }
 }
