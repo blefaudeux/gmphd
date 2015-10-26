@@ -16,7 +16,7 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - g++
-	- libboost-all-dev
+    - libboost-all-dev
     - libeigen3-dev
 
 notifications:
