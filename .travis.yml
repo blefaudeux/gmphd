@@ -1,0 +1,22 @@
+language: cpp
+sudo: false
+compiler:
+  - g++
+  - clang
+    
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make all
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++
+    - libeigen3-dev
+
+notifications:
+  email: benjamin.lefaudeux@gmail.com
