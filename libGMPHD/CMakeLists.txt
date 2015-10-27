@@ -1,5 +1,5 @@
 # Define the project's name
-project(LIBUKF)
+project(LIBGMPHD)
 
 cmake_minimum_required(VERSION 2.6)
 
@@ -12,28 +12,25 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/headers)
 
 # Try to find the needed packages
-find_package(Boost REQUIRED)
-find_package(eigen3)
-if(NOT eigen3_FOUND)
-  set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
+find_package( PkgConfig )
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
 
-  if(NOT EIGEN3_INCLUDE_DIR )
-    # Try to manually define Eigen location
-    set(ENV{EIGEN3_INCLUDE_DIR} "/usr/include/eigen3/")
-    set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
+set(Boost_USE_STATIC_LIBS OFF)
+find_package( Boost REQUIRED )
+include_directories( ${BOOST_INCLUDE_DIRS} )
 
-    # Raise error if that's not enough
-    if(NOT EIGEN3_INCLUDE_DIR )
-      message(FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
-    endif()
-
-    include_directories( "${EIGEN3_INCLUDE_DIR}" )
-  endif()
+# Compiler flags
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+if(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(COMPILER_SUPPORTS_CXX0X)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
-
-# GCC flags
-SET( GCC_COVERAGE_COMPILE_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
-SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
 
 # Set debug or release configurations
 if( CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]" )
