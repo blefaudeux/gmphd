@@ -20,4 +20,4 @@ addons:
     - libeigen3-dev
 
 notifications:
-  email: benjamin.lefaudeux@gmail.com
+  email: none
