@@ -9,7 +9,7 @@ bool compare_int (int i,int j)
 
 bool compareIndex(index_w & first, index_w & second )
 {
-     return first.m_weight > second.m_weight;
+    return first.m_weight > second.m_weight;
 }
 
 GaussianMixture::GaussianMixture( int dim)
@@ -18,7 +18,7 @@ GaussianMixture::GaussianMixture( int dim)
     m_gaussians.clear ();
 }
 
-GaussianMixture::GaussianMixture(const vector<GaussianModel> & source)
+GaussianMixture::GaussianMixture( vector<GaussianModel> const & source )
 {
     m_gaussians = source;
     m_dim = source[0].m_dim;
@@ -70,8 +70,7 @@ void  GaussianMixture::qsort () {
         item = gauss_list.front ();
         gauss_list.pop_front ();
 
-        sorted_gaussians[i] = m_gaussians[item.m_index];
-        ++i;
+        sorted_gaussians[i++] = m_gaussians[item.m_index];
     }
 
     m_gaussians = sorted_gaussians;
@@ -325,17 +324,21 @@ void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, uns
 int   GaussianMixture::selectBestGaussian () {
     // TODO: Ben - move this to a lambda and std::for_each
 
+
+
     float best_weight = 0.f;
     int   best_index = -1;
     int i= 0;
-    for ( auto const & gaussian : m_gaussians)
+
+    std::for_each(m_gaussians.begin(), m_gaussians.end(), [&](GaussianModel const & gaussian)
     {
-        if (gaussian.m_weight > best_weight) {
-            best_index = i;
+        if( gaussian.m_weight > best_weight )
+        {
             best_weight = gaussian.m_weight;
+            best_index = i;
         }
         ++i;
-    }
+    });
 
     return best_index;
 }

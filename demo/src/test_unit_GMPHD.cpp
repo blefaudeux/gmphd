@@ -41,12 +41,12 @@ void initTargetTracking( GMPHD & tracker )
   // Detection model
   float const probDetection = 0.5f;
   float const measNoisePose = 2.f;
-  float const measNoiseSpeed = 2.f;
-  float const measBackground = 1.f;
+  float const measNoiseSpeed = 20.f;
+  float const measBackground = 0.5f;
   tracker.setObservationModel( probDetection, measNoisePose, measNoiseSpeed, measBackground);
 
   // Pruning parameters
-  tracker.setPruningParameters( 0.2f, 2.f, 10);
+  tracker.setPruningParameters( 0.1f, 3.f, 10);
 
   // Spawn (target apparition)
   vector<SpawningModel> spawnModel(1);

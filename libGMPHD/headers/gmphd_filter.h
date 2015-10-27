@@ -109,7 +109,7 @@ private:
   uint   m_maxGaussians;
   uint   m_dimMeasures;
   uint   m_dimState;
-  uint   m_nPredictedTargets;
+  uint   m_nPredTargets;
   uint   m_nCurrentTargets;
   uint   m_nMaxPrune;
 
