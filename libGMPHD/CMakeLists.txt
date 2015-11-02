@@ -50,13 +50,13 @@ if( CMAKE_BUILD_TYPE MATCHES "[Rr][Ee][Ll][Ee][Aa][Ss][Ee]" )
 endif()
 
 # Create static and dynamic libraries
-add_library (GMPHD_static STATIC ${SRC} ${HEADERS})
-add_library (GMPHD_dynamic SHARED ${SRC} ${HEADERS})
+add_library (GMPHDs STATIC ${SRC} ${HEADERS})
+add_library (GMPHDd SHARED ${SRC} ${HEADERS})
 
 # Set the link libraries :
-TARGET_LINK_LIBRARIES(GMPHD_static ${Boost_LIBRARIES} )
-TARGET_LINK_LIBRARIES(GMPHD_dynamic ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES(GMPHDs ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES(GMPHDd ${Boost_LIBRARIES} )
 
 ### Define the installation procedure
-install(TARGETS GMPHD_dynamic GMPHD_static DESTINATION ${PROJECT_SOURCE_DIR}/lib)
+install(TARGETS GMPHDd GMPHDs DESTINATION ${PROJECT_SOURCE_DIR}/lib)
 install(FILES ${HEADERS} DESTINATION ${PROJECT_SOURCE_DIR}/include)
