@@ -12,9 +12,13 @@ Boost and Eigen, though boost is probably dispensable given c++11 improvements (
 How to build ?
 --------------
 after cloning, it's as simple as (unix, for windows you could probably do something with the CMake GUI):
+
 1. `mkdir build`
+
 2. `cd build`
+
 3. `cmake ..` (or `cmake .. -DDEMO=1` if you want to build the demo executable)
+
 4. `make`
 
 General observations
