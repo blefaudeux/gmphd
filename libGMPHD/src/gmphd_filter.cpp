@@ -171,12 +171,12 @@ void  GMPHD::predictBirth()
 
     // -----------------------------------------
     // Compute spawned targets
-    GaussianModel new_spawn(m_dimState);
-
     for( auto const & curr : m_currTargets->m_gaussians )
     {
         for( auto const & spawn : m_spawnModels )
         {
+            GaussianModel new_spawn(m_dimState);
+
             // Define a gaussian model from the existing target
             // and spawning properties
             new_spawn.m_weight = curr.m_weight * spawn.m_weight;
@@ -187,7 +187,7 @@ void  GMPHD::predictBirth()
                               * spawn.m_trans.transpose();
 
             // Add this new gaussian to the list of expected targets
-            m_spawnTargets->m_gaussians.push_back (new_spawn);
+            m_spawnTargets->m_gaussians.push_back ( std::move(new_spawn) );
 
             // Update the number of expected targets
             ++m_nPredTargets;
@@ -327,25 +327,22 @@ void  GMPHD::setNewMeasurements(vector<float> const & position,
     // Clear the gaussian mixture
     m_measTargets->m_gaussians.clear();
 
-    GaussianModel new_obs(m_dimState);
-
     unsigned int iTarget = 0;
 
     while(iTarget < position.size()/m_dimMeasures)
     {
-        new_obs.clear();
+        GaussianModel new_obs(m_dimState);
 
         for (unsigned int i=0; i< m_dimMeasures; ++i) {
             // Create new gaussian model according to measurement
             new_obs.m_mean(i) = position[iTarget*m_dimMeasures + i];
-            new_obs.m_mean(i+m_dimMeasures) = speed[iTarget*m_dimMeasures + i];
-
-            new_obs.m_cov = m_obsCov;
-
-            new_obs.m_weight = 1.f;
-
-            m_measTargets->m_gaussians.push_back(new_obs);
+            new_obs.m_mean(i+m_dimMeasures) = speed[iTarget*m_dimMeasures + i];    
         }
+
+        new_obs.m_cov = m_obsCov;
+        new_obs.m_weight = 1.f;
+
+        m_measTargets->m_gaussians.push_back(std::move(new_obs));
 
         iTarget++;
     }
