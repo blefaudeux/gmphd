@@ -76,7 +76,7 @@ public:
   void  setSpawnModel(vector<SpawningModel> & spawnModels);
 
   // Auxiliary functions
-  void  print();
+  void  print() const;
 
   void  propagate();
 

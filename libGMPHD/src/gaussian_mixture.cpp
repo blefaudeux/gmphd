@@ -1,16 +1,6 @@
 #include "gaussian_mixture.h"
+#include <algorithm>
 // Author : Benjamin Lefaudeux (blefaudeux@github)
-
-// Some stuff to be able to sort out index vectors
-bool compare_int (int i,int j)
-{
-    return (i<j);
-}
-
-bool compareIndex(index_w & first, index_w & second )
-{
-    return first.m_weight > second.m_weight;
-}
 
 GaussianMixture::GaussianMixture( int dim)
 {
@@ -40,40 +30,11 @@ GaussianMixture GaussianMixture::operator = ( GaussianMixture const &source)
     return *this;
 }
 
-void  GaussianMixture::qsort () {
-    // TODO: Ben - rewrite this crap with lambdas
-
-    // Build a list to sort out based on gaussian weights
-    index_w item;
-    list<index_w> gauss_list;
-
-    gauss_list.clear();
-    int i = 0;
-    for (auto const & gaussian : m_gaussians)
+void  GaussianMixture::sort () {
+    std::sort(m_gaussians.begin(), m_gaussians.end(), [](GaussianModel const & lhs, GaussianModel const & rhs)
     {
-        item.m_weight = gaussian.m_weight;
-        item.m_index = i++;
-        gauss_list.push_back (item);
-    }
-
-    // Sort
-    gauss_list.sort(compareIndex);
-
-    // Get the sorted gaussians back
-    vector <GaussianModel> sorted_gaussians;
-
-    sorted_gaussians.resize(m_gaussians.size ());
-    i = 0;
-
-    while ( !gauss_list.empty ())
-    {
-        item = gauss_list.front ();
-        gauss_list.pop_front ();
-
-        sorted_gaussians[i++] = m_gaussians[item.m_index];
-    }
-
-    m_gaussians = sorted_gaussians;
+        return lhs.m_weight > rhs.m_weight;
+    });
 }
 
 
@@ -151,8 +112,6 @@ void GaussianMixture::changeReferential( Matrix4f const & transform)
 
     temp_vec(3,0) = 1.f;
 
-    // mat1.block(i,j,rows,cols)
-
     // Gaussian model :
     // - [x, y, z, dx/dt, dy/dt, dz/dt] m_mean values
     // - 6x6 covariance
@@ -183,6 +142,8 @@ void GaussianMixture::changeReferential( Matrix4f const & transform)
 
 GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merge, bool b_remove_from_mixture)
 {
+    // TODO: Ben - rewrite this crap, could be half way long
+
     GaussianModel merged_model( m_gaussians[0].m_dim );
 
     MatrixXf diff(m_dim, 1);
@@ -235,8 +196,7 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
         // Remove input gaussians from the mixture
         // - sort the index vector
         std::sort(i_gaussians_to_merge.begin (),
-                  i_gaussians_to_merge.end (),
-                  compare_int);
+                  i_gaussians_to_merge.end ());
 
         // - pop out the corresponding gaussians, in reverse
         std::vector<GaussianModel>::iterator it = m_gaussians.begin ();
@@ -252,9 +212,8 @@ GaussianModel  GaussianMixture::mergeGaussians (vector<int> &i_gaussians_to_merg
 void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, unsigned int max_gaussians)
 {
     // Sort the gaussians mixture, ascending order
-    qsort ();
+    sort ();
 
-    bool b_finished = false;
     int index, i_best;
 
     vector<int> i_close_to_best;
@@ -266,14 +225,15 @@ void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, uns
     merged_gaussian.clear();
     pruned_targets.m_gaussians.clear();
 
-    while ( (!m_gaussians.empty()) && (pruned_targets.m_gaussians.size () < max_gaussians) && !b_finished )
+    while ( !m_gaussians.empty()
+            && pruned_targets.m_gaussians.size () < max_gaussians )
     {
         // - Pick the bigger gaussian (based on weight)
         i_best = selectBestGaussian ();
 
-        if ((i_best == -1) || (m_gaussians[i_best].m_weight < trunc_threshold))
+        if ( i_best == -1 || m_gaussians[i_best].m_weight < trunc_threshold)
         {
-            b_finished = true;
+            break;
         }
         else
         {
@@ -298,17 +258,11 @@ void  GaussianMixture::prune(float  trunc_threshold, float  merge_threshold, uns
 
             // - Remove all the merged gaussians from current_targets :
             // -- Sort the indexes
-            sort(i_close_to_best.begin(), i_close_to_best.end());
+            std::sort(i_close_to_best.begin(), i_close_to_best.end());
 
             // -- Remove from the last one (to keep previous indexes unchanged)
             while (!i_close_to_best.empty())
             {
-                if (m_gaussians.empty())
-                {
-                    printf ("Vector is empty, should not go there..\n");
-                    break;
-                }
-
                 index = i_close_to_best.back();
                 i_close_to_best.pop_back();
 

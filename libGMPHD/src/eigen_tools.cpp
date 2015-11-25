@@ -1,38 +1,5 @@
 #include "eigen_tools.h"
 
-// Author : Benjamin Lefaudeux (blefaudeux@github)
-
-void printEigenMatrix(const Eigen::MatrixXf &mat) {
-  int x = mat.rows ();
-  int y = mat.cols ();
-
-  for (int i=0; i<x; ++i) {
-    for (int j=0; j<y; ++j) {
-      printf("% 5.1f ", mat(i,j));
-    }
-    printf("\n");
-  }
-  printf("\n");
-}
-
-void printEigenVector(const std::vector<Eigen::MatrixXf> &vec_mat) {
-  for (unsigned int j=0; j<vec_mat[0].rows(); ++j) {
-    for (unsigned int i=0; i<vec_mat.size(); ++i) {
-      printf("% 5.1f ", vec_mat[i](j,0));
-    }
-    printf("\n");
-  }
-  printf("\n");
-}
-
-void printVec(const std::vector<float> &vec) {
-  for (unsigned int i = 0; i<vec.size (); ++i) {
-    printf("% 5.1f |", vec[i]);
-  }
-  printf("\n\n");
-}
-
-
 
 float pseudo_inv(const Eigen::MatrixXf *mat_in,
                  Eigen::MatrixXf *mat_out) {

@@ -89,7 +89,7 @@ void  GMPHD::buildUpdate ()
         m_uncertainty.push_back( tgt.m_cov * m_obsMatT * temp_matrix );
 
         m_covariance.push_back( (MatrixXf::Identity(m_dimState, m_dimState) - m_uncertainty.back()*m_obsMat)
-                          * tgt.m_cov );
+                                * tgt.m_cov );
     }
 }
 
@@ -118,21 +118,18 @@ bool GMPHD::isInitialized()
 
 void    GMPHD::extractTargets(float threshold)
 {
-    // Deal with crappy settings
-    float thld = max(threshold, 0.f);
+    float const thld = std::max(threshold, 0.f);
 
     // Get trough every target, keep the ones whose weight is above threshold
     m_extractedTargets->m_gaussians.clear();
 
-    for (unsigned int i=0; i<m_currTargets->m_gaussians.size(); ++i)
+    for ( auto const & current_target : m_currTargets->m_gaussians)
     {
-        if (m_currTargets->m_gaussians[i].m_weight >= thld)
+        if (current_target.m_weight >= thld)
         {
-            m_extractedTargets->m_gaussians.push_back(m_currTargets->m_gaussians[i]);
+            m_extractedTargets->m_gaussians.push_back(current_target);
         }
     }
-
-    printf("GMPHD_extract : %zu targets\n", m_extractedTargets->m_gaussians.size ());
 }
 
 void GMPHD::getTrackedTargets(vector<float> & position,
@@ -184,7 +181,7 @@ void  GMPHD::predictBirth()
             new_spawn.m_mean = spawn.m_offset + spawn.m_trans * curr.m_mean;
 
             new_spawn.m_cov = spawn.m_cov + spawn.m_trans * curr.m_cov
-                              * spawn.m_trans.transpose();
+                    * spawn.m_trans.transpose();
 
             // Add this new gaussian to the list of expected targets
             m_spawnTargets->m_gaussians.push_back ( std::move(new_spawn) );
@@ -209,7 +206,7 @@ void  GMPHD::predictTargets () {
         new_target.m_mean = m_tgtDynTrans * curr.m_mean;
 
         new_target.m_cov = m_tgtDynCov + m_tgtDynTrans
-                           * curr.m_cov * m_tgtDynTrans.transpose();
+                * curr.m_cov * m_tgtDynTrans.transpose();
 
         // Push back to the expected targets
         m_expTargets->m_gaussians.push_back( new_target );
@@ -217,7 +214,7 @@ void  GMPHD::predictTargets () {
     }
 }
 
-void GMPHD::print()
+void GMPHD::print() const
 {
     printf("Current gaussian mixture : \n");
 
@@ -246,7 +243,7 @@ void  GMPHD::propagate ()
     // Build the update components
     buildUpdate ();
 
-    if(m_bVerbose)
+    if( m_bVerbose )
     {
         printf("\nGMPHD_propagate :--- Expected targets : %d ---\n", m_nPredTargets);
         m_expTargets->print();
@@ -311,7 +308,7 @@ void  GMPHD::setDynamicsModel(float sampling, float processNoise)
     // Fill in covariance matrix
     // Extra covariance added by the dynamics. Could be 0.
     m_tgtDynCov = processNoise * processNoise *
-                  MatrixXf::Identity(m_dimState, m_dimState);
+            MatrixXf::Identity(m_dimState, m_dimState);
 }
 
 void GMPHD::setDynamicsModel( MatrixXf const & tgt_dyn_transitions,
@@ -336,7 +333,7 @@ void  GMPHD::setNewMeasurements(vector<float> const & position,
         for (unsigned int i=0; i< m_dimMeasures; ++i) {
             // Create new gaussian model according to measurement
             new_obs.m_mean(i) = position[iTarget*m_dimMeasures + i];
-            new_obs.m_mean(i+m_dimMeasures) = speed[iTarget*m_dimMeasures + i];    
+            new_obs.m_mean(i+m_dimMeasures) = speed[iTarget*m_dimMeasures + i];
         }
 
         new_obs.m_cov = m_obsCov;
@@ -420,11 +417,11 @@ void  GMPHD::update()
         if (i != m_iBirthTargets[i_birth_current])
         {
             m_currTargets->m_gaussians[i].m_weight = (1.f - m_pDetection) *
-                                                     m_expTargets->m_gaussians[i].m_weight;
+                    m_expTargets->m_gaussians[i].m_weight;
         }
         else
         {
-            i_birth_current = min(i_birth_current+1, (int) m_iBirthTargets.size ());
+            i_birth_current = std::min(i_birth_current+1, (int) m_iBirthTargets.size ());
             m_currTargets->m_gaussians[i].m_weight = 0.f;
         }
 
@@ -447,13 +444,13 @@ void  GMPHD::update()
 
             // Compute matching factor between predictions and measures.
             m_currTargets->m_gaussians[index].m_weight =  m_pDetection * m_expTargets->m_gaussians[n_targt].m_weight /
-                                                          mahalanobis<2>( m_measTargets->m_gaussians[n_meas -1].m_mean.block(0,0,m_dimMeasures,1),
+                    mahalanobis<2>( m_measTargets->m_gaussians[n_meas -1].m_mean.block(0,0,m_dimMeasures,1),
                     m_expMeasure[n_targt].block(0,0,m_dimMeasures,1),
                     m_expDisp[n_targt].block(0,0, m_dimMeasures, m_dimMeasures));
 
 
             m_currTargets->m_gaussians[index].m_mean =  m_expTargets->m_gaussians[n_targt].m_mean +
-                                                        m_uncertainty[n_targt] * (m_measTargets->m_gaussians[n_meas -1].m_mean - m_expMeasure[n_targt]);
+                    m_uncertainty[n_targt] * (m_measTargets->m_gaussians[n_meas -1].m_mean - m_expMeasure[n_targt]);
 
             m_currTargets->m_gaussians[index].m_cov = m_covariance[n_targt];
         }

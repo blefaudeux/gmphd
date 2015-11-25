@@ -13,12 +13,6 @@
 
 using namespace std;
 
-void printEigenMatrix(const Eigen::MatrixXf &mat);
-
-void printEigenVector(const vector<Eigen::MatrixXf> &vec_mat);
-
-void printVec(const std::vector<float> &vec);
-
 float pseudo_inv(const Eigen::MatrixXf *mat_in,
                 Eigen::MatrixXf *mat_out);
 
