@@ -7,18 +7,22 @@
  */
 
 #include "gmphd_filter.h"
-#include <cv.h>
-#include <highgui.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include "opencv2/imgcodecs.hpp"
 
 using namespace std;
 
-bool isTargetVisible(float probaDetection) {
+bool isTargetVisible(float probaDetection)
+{
   int const maxRand = probaDetection * RAND_MAX;
   return rand() < maxRand;
 }
 
 // Init the Gaussian Mixture Probability Hypothesis Density filter
-void initTargetTracking(GMPHD &tracker) {
+void initTargetTracking(GMPHD &tracker)
+{
   // Birth model (spawn)
   GaussianModel Birth(4);
   Birth.m_weight = 0.2f;
@@ -58,34 +62,40 @@ void initTargetTracking(GMPHD &tracker) {
 }
 
 bool display(vector<float> const &measures, vector<float> const &filtered,
-             vector<float> const &weight, IplImage &pict) {
+             vector<float> const &weight, cv::Mat &pict)
+{
+  return true;
+
   // Display measurement hits
-  for (auto tgt = measures.begin(); tgt != measures.end(); tgt++) {
-    cvDrawCircle(&pict, cvPoint(*tgt, *(++tgt)), 2, cvScalar(0, 0, 255), 2);
+  for (auto tgt = measures.begin(); tgt != measures.end(); tgt++)
+  {
+    cv::circle(pict, cv::Point2d(*tgt, *(++tgt)), 2, cv::Scalar(0, 0, 255), 2);
   }
 
   // Display filter output
   float const scale = 5.f;
   auto w = weight.begin();
-  for (auto tgt = filtered.begin(); tgt != filtered.end(); tgt++) {
-    cvDrawCircle(&pict, cvPoint(*tgt, *(++tgt)), *(w++) * scale,
-                 cvScalar(200, 0, 200), 2);
+  for (auto tgt = filtered.begin(); tgt != filtered.end(); tgt++)
+  {
+    cv::circle(pict, cv::Point2d(*tgt, *(++tgt)), *(w++) * scale,
+               cv::Scalar(200, 0, 200), 2);
   }
 
-  cvShowImage("Filtering results", &pict);
+  cv::imshow("Filtering results", pict);
 
   printf("-----------------------------------------------------------------\n");
-  int const k = cvWaitKey(100);
+  int const k = cv::waitKey(100);
   return (k != 27) && (k != 1048603);
 }
 
-int main() {
+int main()
+{
 
   // Deal with the OpenCV window..
   unsigned int width = 800;
   unsigned int height = 800;
 
-  IplImage *image = cvCreateImage(cvSize(width, height), 8, 3);
+  cv::Mat image = cv::Mat(cv::Size(width, height), 8, CV_8UC3);
 
   // Declare the target tracker and initialize the motion model
   int const n_targets = 5;
@@ -95,21 +105,24 @@ int main() {
   // Track the circling targets
   vector<float> targetEstimPosition, targetEstimSpeed, targetEstimWeight;
   vector<float> targetMeasPosition, targetMeasSpeed;
-  vector< pair<float, float> > previousPoses(n_targets);
+  vector<pair<float, float>> previousPoses(n_targets);
 
   float measurements[2];
   float const detectionProbability = 0.5f;
 
-  for (float angle = CV_PI / 2 - 0.03f;; angle += 0.01) {
-    cvZero(image);
+  for (float angle = CV_PI / 2 - 0.03f;; angle += 0.01)
+  {
+    image = cv::Mat::zeros(image.rows, image.cols, image.type());
 
     targetMeasPosition.clear();
     targetMeasSpeed.clear();
 
-    for (unsigned int i = 0; i < n_targets; ++i) {
+    for (unsigned int i = 0; i < n_targets; ++i)
+    {
       // For each target, randomly visible or not
       // Make up noisy measurements
-      if (isTargetVisible(detectionProbability)) {
+      if (isTargetVisible(detectionProbability))
+      {
         measurements[0] = (width >> 1) + 300 * cos(angle) +
                           (rand() % 2 == 1 ? -1 : 1) * (rand() % 50);
         measurements[1] = (height >> 1) + 300 * sin(angle) +
@@ -138,11 +151,11 @@ int main() {
 
     // Show our drawing
     if (!display(targetMeasPosition, targetEstimPosition, targetEstimWeight,
-                 *image)) {
+                 image))
+    {
       break;
     }
   }
 
-  cvReleaseImage(&image);
   return 1;
 }

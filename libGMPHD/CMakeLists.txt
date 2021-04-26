@@ -16,9 +16,6 @@ find_package( PkgConfig )
 pkg_check_modules( EIGEN3 REQUIRED eigen3 )
 include_directories( ${EIGEN3_INCLUDE_DIRS} )
 
-set(Boost_USE_STATIC_LIBS OFF)
-find_package( Boost REQUIRED )
-include_directories( ${BOOST_INCLUDE_DIRS} )
 
 # Compiler flags
 include(CheckCXXCompilerFlag)
@@ -53,9 +50,6 @@ endif()
 add_library (GMPHDs STATIC ${SRC} ${HEADERS})
 add_library (GMPHDd SHARED ${SRC} ${HEADERS})
 
-# Set the link libraries :
-TARGET_LINK_LIBRARIES(GMPHDs ${Boost_LIBRARIES} )
-TARGET_LINK_LIBRARIES(GMPHDd ${Boost_LIBRARIES} )
 
 ### Define the installation procedure
 install(TARGETS GMPHDd GMPHDs DESTINATION ${PROJECT_SOURCE_DIR}/lib)

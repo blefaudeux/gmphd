@@ -7,7 +7,7 @@ A Gaussian-Mixtures Probability Hypothesis Density (GM-PHD) filter for multitarg
 
 What does it depend on ?
 -------------------------
-Boost and Eigen, though boost is probably dispensable given c++11 improvements (that's a TODO).
+Eigen, and OpenCV for the quick and dirty demo
 
 How to build ?
 --------------
@@ -23,7 +23,7 @@ After cloning, it's as simple as (unix, for windows you could probably do someth
 
 General observations
 --------------------
-Code quality is not top notch, leaves a lot to be desired. Feel free to contribute, just check that 
+Code quality is not top notch, leaves a lot to be desired. Feel free to contribute, just check that
 Travis CI is still happy from time to time..
 
 License

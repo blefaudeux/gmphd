@@ -3,7 +3,7 @@ sudo: false
 compiler:
   - g++
   - clang
-    
+
 script:
   - mkdir build
   - cd build
@@ -16,7 +16,6 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - g++
-    - libboost-all-dev
     - libeigen3-dev
 
 notifications:
