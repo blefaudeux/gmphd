@@ -38,17 +38,14 @@ if( CMAKE_BUILD_TYPE MATCHES "[Rr][Ee][Ll][Ee][Aa][Ss][Ee]" )
     message( "INFO: RELEASE BUILD" )
 endif()
 
-# Add all the files we're interested in (mostly for QTCreator)
+# Add all the files we're interested in
 file(GLOB SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB HEADERS ${PROJECT_SOURCE_DIR}/headers/*.h)
 
-# Make sure the linker can find the GMPHD library once it is built.
-set(LIBGMPHD_BINARY_DIR ${PROJECT_BINARY_DIR}/../libGMPHD)
-link_directories (${LIBGMPHD_BINARY_DIR})
-
 # Build the lib before the demo
 add_executable(demo ${SRC} ${HEADERS})
-add_dependencies(demo GMPHDs)
+target_link_libraries (demo  ${OpenCV_LIBS})
 
-# Link the executable to the GMPHD library.
-target_link_libraries (demo ${LIBGMPHD_BINARY_DIR}/libGMPHDs.a ${OpenCV_LIBS})
+# Sanitizers
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")

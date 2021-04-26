@@ -13,9 +13,6 @@
 
 using namespace std;
 
-float pseudo_inv(Eigen::MatrixXf const &mat_in,
-                 Eigen::MatrixXf &mat_out);
-
 template <size_t size>
 float pseudo_inv(Eigen::Matrix<float, size, size> const &mat_in,
                  Eigen::Matrix<float, size, size> &mat_out)
@@ -41,9 +38,13 @@ float pseudo_inv(Eigen::Matrix<float, size, size> const &mat_in,
     for (int i = 0; i < size; ++i)
     {
         if (eig_val(i, 0) != 0.f)
+        {
             eig_val_inv(i, i) = 1.f / eig_val(i, 0);
+        }
         else
+        {
             eig_val_inv(i, i) = 0.f;
+        }
     }
 
     *mat_out = V.transpose() * eig_val_inv * U.transpose();

@@ -61,50 +61,52 @@ void initTargetTracking(GMPHD &tracker)
   tracker.isInitialized();
 }
 
-bool display(vector<float> const &measures, vector<float> const &filtered,
-             vector<float> const &weight, cv::Mat &pict)
+struct Target
 {
-  return true;
+  tuple<float, float> position;
+  tuple<float, float> speed;
+  float weight;
+};
 
+bool display(vector<Target> const &measures, vector<Target> const &filtered, cv::Mat &pict)
+{
   // Display measurement hits
-  for (auto tgt = measures.begin(); tgt != measures.end(); tgt++)
+  for (const auto &meas : measures)
   {
-    cv::circle(pict, cv::Point2d(*tgt, *(++tgt)), 2, cv::Scalar(0, 0, 255), 2);
+    cv::circle(pict, cv::Point(get<0>(meas.position), get<1>(meas.position)), 2, cv::Scalar(0, 0, 255), 2);
   }
 
   // Display filter output
   float const scale = 5.f;
-  auto w = weight.begin();
-  for (auto tgt = filtered.begin(); tgt != filtered.end(); tgt++)
+  for (const auto &filter : filtered)
   {
-    cv::circle(pict, cv::Point2d(*tgt, *(++tgt)), *(w++) * scale,
+    cv::circle(pict, cv::Point(get<0>(filter.position), get<1>(filter.position)), filter.weight * scale,
                cv::Scalar(200, 0, 200), 2);
   }
 
+  printf("-----------------------------------------------------------------\n");
   cv::imshow("Filtering results", pict);
 
-  printf("-----------------------------------------------------------------\n");
   int const k = cv::waitKey(100);
   return (k != 27) && (k != 1048603);
 }
 
 int main()
 {
-
   // Deal with the OpenCV window..
   unsigned int width = 800;
   unsigned int height = 800;
+  namedWindow("Filtering results", cv::WINDOW_AUTOSIZE);
 
   cv::Mat image = cv::Mat(cv::Size(width, height), 8, CV_8UC3);
 
   // Declare the target tracker and initialize the motion model
   int const n_targets = 5;
-  GMPHD targetTracker(n_targets, 2, true);
+  GMPHD<2> targetTracker(n_targets);
   initTargetTracking(targetTracker);
 
   // Track the circling targets
-  vector<float> targetEstimPosition, targetEstimSpeed, targetEstimWeight;
-  vector<float> targetMeasPosition, targetMeasSpeed;
+  vector<Target> targetEstim, targetMeas;
   vector<pair<float, float>> previousPoses(n_targets);
 
   float measurements[2];
@@ -112,10 +114,10 @@ int main()
 
   for (float angle = CV_PI / 2 - 0.03f;; angle += 0.01)
   {
-    image = cv::Mat::zeros(image.rows, image.cols, image.type());
+    image = cv::Mat::zeros(image.size(), CV_8UC3);
 
-    targetMeasPosition.clear();
-    targetMeasSpeed.clear();
+    targetMeas.clear();
+    targetEstim.clear();
 
     for (unsigned int i = 0; i < n_targets; ++i)
     {
@@ -128,29 +130,27 @@ int main()
         measurements[1] = (height >> 1) + 300 * sin(angle) +
                           (rand() % 2 == 1 ? -1 : 1) * (rand() % 50);
 
-        targetMeasPosition.push_back(measurements[0]);
-        targetMeasPosition.push_back(measurements[1]);
+        Target measurement = {{measurements[0], measurements[1]},
+                              {0.f, 0.f}, /* measurements[0] - previousPoses[i].first */
+                              0.f};
 
-        targetMeasSpeed.push_back(
-            0.f /* measurements[0] - previousPoses[i].first */);
-        targetMeasSpeed.push_back(
-            0.f /* measurements[1] - previousPoses[i].second */);
+        targetMeas.push_back(measurement);
 
         previousPoses[i].first = measurements[0];
         previousPoses[i].second = measurements[1];
       }
     }
 
-    // Update the tracker
-    targetTracker.setNewMeasurements(targetMeasPosition, targetMeasSpeed);
+    // // Update the tracker
+    // targetTracker.setNewMeasurements(targetMeas);
 
-    // Get all the predicted targets
-    targetTracker.propagate();
-    targetTracker.getTrackedTargets(targetEstimPosition, targetEstimSpeed,
-                                    targetEstimWeight, 0.2f);
+    // // Get all the predicted targets
+    // targetTracker.propagate();
+    // targetTracker.getTrackedTargets(targetEstimPosition, targetEstimSpeed,
+    //                                 targetEstimWeight, 0.2f);
 
     // Show our drawing
-    if (!display(targetMeasPosition, targetEstimPosition, targetEstimWeight,
+    if (!display(targetMeas, targetEstim,
                  image))
     {
       break;

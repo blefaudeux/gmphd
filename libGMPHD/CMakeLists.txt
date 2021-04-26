@@ -45,12 +45,3 @@ endif()
 if( CMAKE_BUILD_TYPE MATCHES "[Rr][Ee][Ll][Ee][Aa][Ss][Ee]" )
     message( "INFO: RELEASE BUILD" )
 endif()
-
-# Create static and dynamic libraries
-add_library (GMPHDs STATIC ${SRC} ${HEADERS})
-add_library (GMPHDd SHARED ${SRC} ${HEADERS})
-
-
-### Define the installation procedure
-install(TARGETS GMPHDd GMPHDs DESTINATION ${PROJECT_SOURCE_DIR}/lib)
-install(FILES ${HEADERS} DESTINATION ${PROJECT_SOURCE_DIR}/include)
