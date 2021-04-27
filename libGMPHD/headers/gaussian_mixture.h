@@ -59,12 +59,12 @@ public:
 
     GaussianMixture(GaussianMixture const &source)
     {
-        m_gaussians = source;
+        m_gaussians = source.m_gaussians;
     }
 
     GaussianMixture(vector<GaussianModel<D>> const &source)
     {
-        m_gaussians = source.m_gaussians;
+        m_gaussians = source;
     }
 
     GaussianMixture operator=(const GaussianMixture &source)
@@ -137,7 +137,7 @@ public:
                       i_gaussians_to_merge.end());
 
             // - pop out the corresponding gaussians, in reverse
-            std::vector<GaussianModel<D>>::iterator it = m_gaussians.begin();
+            auto it = m_gaussians.begin();
 
             for (int i = i_gaussians_to_merge.size() - 1; i > -1; ++i)
             {
@@ -184,32 +184,6 @@ public:
         }
     }
 
-    void print()
-    {
-        if (m_gaussians.size() > 0)
-        {
-            printf("Gaussian mixture : \n");
-
-            int i = 0;
-            for (auto const &gaussian : m_gaussians)
-            {
-                printf("%2d - pos %3.1f | %3.1f | %3.1f - cov %3.1f | %3.1f | %3.1f - spd %3.2f | %3.2f | %3.2f - weight %3.3f\n",
-                       i++,
-                       gaussian.m_mean(0, 0),
-                       gaussian.m_mean(1, 0),
-                       gaussian.m_mean(2, 0),
-                       gaussian.m_cov(0, 0),
-                       gaussian.m_cov(1, 1),
-                       gaussian.m_cov(2, 2),
-                       gaussian.m_mean(3, 0),
-                       gaussian.m_mean(4, 0),
-                       gaussian.m_mean(5, 0),
-                       gaussian.m_weight);
-            }
-            printf("\n");
-        }
-    }
-
     void prune(float trunc_threshold, float merge_threshold, unsigned int max_gaussians)
     {
         // Sort the gaussians mixture, ascending order
@@ -218,8 +192,6 @@ public:
         int index, i_best;
 
         vector<int> i_close_to_best;
-        vector<GaussianModel<D>>::iterator position;
-
         GaussianMixture<D> pruned_targets;
         GaussianModel<D> merged_gaussian;
 
@@ -228,7 +200,7 @@ public:
 
         while (!m_gaussians.empty() && pruned_targets.m_gaussians.size() < max_gaussians)
         {
-            // - Pick the bigger gaussian (based on weight)
+            // - Pick the biggest gaussian (based on weight)
             i_best = selectBestGaussian();
 
             if (i_best == -1 || m_gaussians[i_best].m_weight < trunc_threshold)
@@ -266,7 +238,7 @@ public:
                     index = i_close_to_best.back();
                     i_close_to_best.pop_back();
 
-                    position = m_gaussians.erase(m_gaussians.begin() + index);
+                    m_gaussians.erase(m_gaussians.begin() + index);
                 }
             }
         }
@@ -278,7 +250,7 @@ public:
     {
         std::sort(m_gaussians.begin(), m_gaussians.end(), [](const auto &lhs, const auto &rhs) {
             return lhs.m_weight > rhs.m_weight;
-        })
+        });
     }
 
     void selectCloseGaussians(int i_ref, float threshold, vector<int> &close_gaussians)
@@ -287,8 +259,8 @@ public:
 
         float gauss_distance;
 
-        Matrix<float, 3, 1> diff_vec;
-        Matrix<float, 3, 3> cov_inverse;
+        Matrix<float, D, 1> diff_vec;
+        Matrix<float, D, D> cov_inverse;
 
         // We only take positions into account there
         int i = 0;
@@ -297,13 +269,13 @@ public:
             if (i != i_ref)
             {
                 // Compute distance
-                diff_vec = m_gaussians[i_ref].m_mean.block(0, 0, 3, 1) -
-                           gaussian.m_mean.block(0, 0, 3, 1);
+                diff_vec = m_gaussians[i_ref].m_mean.head(D) -
+                           gaussian.m_mean.head(D);
 
-                cov_inverse = (m_gaussians[i_ref].m_cov.block(0, 0, 3, 3)).inverse();
+                cov_inverse = (m_gaussians[i_ref].m_cov.topLeftCorner(3, 3)).inverse();
 
                 gauss_distance = diff_vec.transpose() *
-                                 cov_inverse.block(0, 0, 3, 3) *
+                                 cov_inverse.topLeftCorner(3, 3) *
                                  diff_vec;
 
                 // Add to the set of close gaussians, if below threshold
@@ -334,37 +306,37 @@ public:
         return best_index;
     }
 
-    void changeReferential(const Matrix4f &transform)
-    {
-        Matrix<float, 4, 1> temp_vec, temp_vec_new;
-        temp_vec(3, 0) = 1.f;
+    // void changeReferential(const Matrix4f &transform)
+    // {
+    //     Matrix<float, 4, 1> temp_vec, temp_vec_new;
+    //     temp_vec(3, 0) = 1.f;
 
-        // Gaussian model :
-        // - [x, y, z, dx/dt, dy/dt, dz/dt] m_mean values
-        // - 6x6 covariance
+    //     // Gaussian model :
+    //     // - [x, y, z, dx/dt, dy/dt, dz/dt] m_mean values
+    //     // - 6x6 covariance
 
-        // For every gaussian model, change referential
-        for (auto &gaussian : m_gaussians)
-        {
-            // Change positions
-            temp_vec.block(0, 0, 3, 1) = gaussian.m_mean.block(0, 0, 3, 1);
+    //     // For every gaussian model, change referential
+    //     for (auto &gaussian : m_gaussians)
+    //     {
+    //         // Change positions
+    //         temp_vec.block(0, 0, 3, 1) = gaussian.m_mean.block(0, 0, 3, 1);
 
-            temp_vec_new = transform * temp_vec;
+    //         temp_vec_new = transform * temp_vec;
 
-            gaussian.m_mean.block(0, 0, 3, 1) = temp_vec_new.block(0, 0, 3, 1);
+    //         gaussian.m_mean.block(0, 0, 3, 1) = temp_vec_new.block(0, 0, 3, 1);
 
-            // Change speeds referential
-            temp_vec.block(0, 0, 3, 1) = gaussian.m_mean.block(3, 0, 3, 1);
+    //         // Change speeds referential
+    //         temp_vec.block(0, 0, 3, 1) = gaussian.m_mean.block(3, 0, 3, 1);
 
-            temp_vec_new = transform * temp_vec;
+    //         temp_vec_new = transform * temp_vec;
 
-            gaussian.m_mean.block(3, 0, 3, 1) = temp_vec_new.block(0, 0, 3, 1);
+    //         gaussian.m_mean.block(3, 0, 3, 1) = temp_vec_new.block(0, 0, 3, 1);
 
-            // Change covariance referential
-            //  (only take the rotation into account)
-            // TODO
-        }
-    }
+    //         // Change covariance referential
+    //         //  (only take the rotation into account)
+    //         // TODO
+    //     }
+    // }
 
 public:
     vector<GaussianModel<D>> m_gaussians;

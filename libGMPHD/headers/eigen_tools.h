@@ -1,12 +1,10 @@
-#ifndef EIGEN_TOOLS_H
-#define EIGEN_TOOLS_H
+#pragma once
 
 // Author : Benjamin Lefaudeux (blefaudeux@github)
 
 #include <Eigen/Eigen>
 #include <vector>
 #include <stdio.h>
-#include "def.h"
 #include <iostream>
 #include <Eigen/StdVector>
 #include <math.h>
@@ -34,7 +32,7 @@ float pseudo_inv(Eigen::Matrix<float, size, size> const &mat_in,
     V = svd.matrixV();
 
     // Compute pseudo-inverse
-    // - quick'n'dirty inversion of eigen matrix
+    // - quick'n'dirty inversion of eigen Eigen::Matrix
     for (int i = 0; i < size; ++i)
     {
         if (eig_val(i, 0) != 0.f)
@@ -59,4 +57,56 @@ float pseudo_inv(Eigen::Matrix<float, size, size> const &mat_in,
     return det;
 }
 
-#endif // EIGEN_TOOLS_H
+template <size_t T>
+static float mahalanobis(const Eigen::Matrix<float, T, 1> &point,
+                         const Eigen::Matrix<float, T, 1> &mean,
+                         const Eigen::Matrix<float, T, T> &cov)
+{
+    int ps = point.rows();
+    Eigen::Matrix<float, T, 1> x_cen = point - mean;
+    Eigen::Matrix<float, T, T> b = Eigen::Matrix<float, T, T>::Identity();
+
+    // TODO: Ben - cov needs to be normalized !
+    cov.ldlt().solveInPlace(b);
+    x_cen = b * x_cen;
+    return (x_cen.transpose() * x_cen).sum(); // FIXME / looks a bit fishy
+}
+
+template <size_t T>
+static float gaussDensity(const Eigen::Matrix<float, T, 1> &point,
+                          const Eigen::Matrix<float, T, 1> &mean,
+                          const Eigen::Matrix<float, T, T> &cov)
+{
+    float det, res;
+
+    Eigen::Matrix<float, T, T> cov_inverse;
+    Eigen::Matrix<float, T, 1> mismatch;
+
+    det = cov.determinant();
+    cov_inverse = cov.inverse();
+
+    mismatch = point - mean;
+
+    Eigen::Matrix<float, 1, 1> distance = mismatch.transpose() * cov_inverse * mismatch;
+    distance /= -2.f;
+
+    // Deal with faulty determinant case
+    if (det == 0.f)
+    {
+        return 0.f;
+    }
+
+    res = 1.f / sqrt(pow(2 * M_PI, T) * fabs(det)) * exp(distance.coeff(0, 0));
+
+    if (isinf(det))
+    {
+        printf("Problem in multivariate gaussian\n distance : %f - det %f\n", distance.coeff(0, 0), det);
+        cout << "Cov \n"
+             << cov << endl
+             << "Cov inverse \n"
+             << cov_inverse << endl;
+        return 0.f;
+    }
+
+    return res;
+}

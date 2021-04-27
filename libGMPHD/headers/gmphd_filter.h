@@ -12,23 +12,16 @@ using namespace Eigen;
 /*!
  * \brief The spawning_model struct
  */
-template <size_t D>
+template <size_t S>
 struct SpawningModel
 {
-  constexpr unsigned int S = D * 2;
-
-  SpawningModel
+  SpawningModel()
   {
     m_trans.setIdentity();
     m_cov.setIdentity();
     m_offset.setZero();
     m_weight = 0.1f;
-    m_dim = D;
-    m_state = S;
   }
-
-  int m_dim;
-  int m_state;
 
   float m_weight;
 
@@ -43,11 +36,18 @@ struct SpawningModel
 template <size_t D>
 class GMPHD
 {
-  const unsigned int S = D * 2;
+  static const size_t S = D * 2;
 
 public:
-  GMPHD(int max_gaussians, bool verbose = false) : m_bVerbose(verbose),
-                                                   m_maxGaussians(max_gaussians),
+  struct Target
+  {
+    Matrix<float, D, 1> position;
+    Matrix<float, D, 1> speed;
+    float weight;
+  };
+
+  GMPHD(int max_gaussians, bool verbose = false) : m_maxGaussians(max_gaussians), m_bVerbose(verbose)
+
   {
     m_dimMeasures = D;
     m_dimState = 2 * m_dimMeasures;
@@ -94,56 +94,39 @@ public:
     m_currTargets->changeReferential(transform);
   }
 
-  void setNewMeasurements(vector<float> const &position, vector<float> const &speed)
+  void setNewMeasurements(vector<Target> const &measurements)
   {
     // Clear the gaussian mixture
     m_measTargets->m_gaussians.clear();
 
-    unsigned int iTarget = 0;
-
-    while (iTarget < position.size() / m_dimMeasures)
+    for (const auto &meas : measurements)
     {
+      // Create new gaussian model according to measurement
       GaussianModel<S> new_obs;
-
-      for (unsigned int i = 0; i < m_dimMeasures; ++i)
-      {
-        // Create new gaussian model according to measurement
-        new_obs.m_mean(i) = position[iTarget * m_dimMeasures + i];
-        new_obs.m_mean(i + m_dimMeasures) = speed[iTarget * m_dimMeasures + i];
-      }
-
+      new_obs.m_mean.head(m_dimMeasures) = meas.position;
+      new_obs.m_mean.tail(m_dimMeasures) = meas.speed;
       new_obs.m_cov = m_obsCov;
-      new_obs.m_weight = 1.f;
+      new_obs.m_weight = meas.weight;
 
       m_measTargets->m_gaussians.push_back(std::move(new_obs));
-
-      iTarget++;
     }
   }
 
   // Output
-  void getTrackedTargets(vector<float> &position, vector<float> &speed, vector<float> &weight,
-                         float const &extract_thld)
+  vector<Target> getTrackedTargets(float const &extract_thld)
   {
     // TODO: Rewrite in modern C++
 
     // Fill in "extracted_targets" from the "current_targets"
     extractTargets(extract_thld);
 
-    position.clear();
-    speed.clear();
-    weight.clear();
+    vector<Target> targets;
 
     for (auto const &gaussian : m_extractedTargets->m_gaussians)
     {
-      for (unsigned int j = 0; j < m_dimMeasures; ++j)
-      {
-        position.push_back(gaussian.m_mean(j, 0));
-        speed.push_back(gaussian.m_mean(m_dimMeasures + j, 0));
-      }
-
-      weight.push_back(gaussian.m_weight);
+      targets.push_back({.position = gaussian.m_mean.head(m_dimMeasures), .speed = gaussian.m_mean.tail(m_dimMeasures), .weight = gaussian.m_weight});
     }
+    return targets;
   }
 
   // Parameters to set before use
@@ -176,13 +159,13 @@ public:
     m_pSurvival = _prob_survival;
   }
 
-  void setObservationModel(float probDetectionOverall, float m_measNoisePose,
-                           float m_measNoiseSpeed, float m_measNoiseBackground)
+  void setObservationModel(float probDetectionOverall, float measNoisePose,
+                           float measurement_noise_speed, float measNoiseBackground)
   {
     m_pDetection = probDetectionOverall;
-    m_measNoisePose = measurement_noise_pose;
+    m_measNoisePose = measNoisePose;
     m_measNoiseSpeed = measurement_noise_speed;
-    m_measNoiseBackground = measurement_background; // False detection probability
+    m_measNoiseBackground = measNoiseBackground; // False detection probability
 
     // Set model matrices
     m_obsMat.setIdentity();
@@ -202,31 +185,14 @@ public:
     m_nMaxPrune = prune_max_nb;
   }
 
-  void setBirthModel(vector<GaussianModel<S>> &m_birthModel)
+  void setBirthModel(const GaussianMixture<S> &birthModel)
   {
-    m_birthModel.reset(new GaussianMixture(birth_model));
+    m_birthModel.reset(new GaussianMixture<S>(birthModel));
   }
 
-  void setSpawnModel(vector<SpawningModel<D>> &spawnModels)
+  void setSpawnModel(vector<SpawningModel<S>> &spawnModels)
   {
     m_spawnModels = spawnModels;
-  }
-
-  // Auxiliary functions
-  void print() const
-  {
-    printf("Current gaussian mixture : \n");
-
-    int i = 0;
-    for (auto const &gauss : m_currTargets->m_gaussians)
-    {
-      printf("Gaussian %d - pos %.1f  %.1f %.1f - cov %.1f  %.1f %.1f - weight %.3f\n",
-             i++,
-             gauss.m_mean(0, 0), gauss.m_mean(1, 0), gauss.m_mean(2, 0),
-             gauss.m_cov(0, 0), gauss.m_cov(1, 1), gauss.m_cov(2, 2),
-             gauss.m_weight);
-    }
-    printf("\n");
   }
 
   void propagate()
@@ -242,29 +208,11 @@ public:
     // Build the update components
     buildUpdate();
 
-    if (m_bVerbose)
-    {
-      printf("\nGMPHD_propagate :--- Expected targets : %d ---\n", m_nPredTargets);
-      m_expTargets->print();
-    }
-
     // Update GMPHD
     update();
 
-    if (m_bVerbose)
-    {
-      printf("\nGMPHD_propagate :--- \n");
-      m_currTargets->print();
-    }
-
     // Prune gaussians (remove weakest, merge close enough gaussians)
-    pruneGaussians()
-
-        if (m_bVerbose)
-    {
-      printf("\nGMPHD_propagate :--- Pruned targets : ---\n");
-      m_currTargets->print();
-    }
+    pruneGaussians();
 
     // Clean vectors :
     m_expMeasure.clear();
@@ -284,7 +232,7 @@ private:
      * \brief The spawning models (how gaussians spawn from existing targets)
      * Example : how airplanes take off from a carrier..
      */
-  vector<SpawningModel<D>, aligned_allocator<SpawningModel<D>>> m_spawnModels;
+  vector<SpawningModel<S>> m_spawnModels;
 
   void buildUpdate()
   {
@@ -309,19 +257,6 @@ private:
     {
       m_expTargets->m_gaussians.insert(m_expTargets->m_gaussians.end(), m_spawnTargets->m_gaussians.begin(),
                                        m_spawnTargets->m_gaussians.begin() + m_spawnTargets->m_gaussians.size());
-    }
-
-    if (m_bVerbose)
-    {
-      printf("GMPHD : inserted %zu birth targets, now %zu expected\n",
-             m_birthTargets->m_gaussians.size(), m_expTargets->m_gaussians.size());
-
-      m_birthTargets->print();
-
-      printf("GMPHD : inserted %zu spawned targets, now %zu expected\n",
-             m_spawnTargets->m_gaussians.size(), m_expTargets->m_gaussians.size());
-
-      m_spawnTargets->print();
     }
 
     // Compute PHD update components (for every expected target)
@@ -384,7 +319,7 @@ private:
     {
       for (auto const &spawn : m_spawnModels)
       {
-        GaussianModel<S> new_spawn();
+        GaussianModel<S> new_spawn;
 
         // Define a gaussian model from the existing target
         // and spawning properties
@@ -405,18 +340,15 @@ private:
 
   void predictTargets()
   {
-    GaussianModel<D> new_target();
-
     m_expTargets->m_gaussians.clear();
     m_expTargets->m_gaussians.reserve(m_currTargets->m_gaussians.size());
 
     for (auto const &curr : m_currTargets->m_gaussians)
     {
       // Compute the new shape of the target
+      GaussianModel<S> new_target;
       new_target.m_weight = m_pSurvival * curr.m_weight;
-
       new_target.m_mean = m_tgtDynTrans * curr.m_mean;
-
       new_target.m_cov = m_tgtDynCov + m_tgtDynTrans * curr.m_cov * m_tgtDynTrans.transpose();
 
       // Push back to the expected targets
@@ -478,10 +410,11 @@ private:
         index = n_meas * m_nPredTargets + n_targt;
 
         // Compute matching factor between predictions and measures.
-        m_currTargets->m_gaussians[index].m_weight = m_pDetection * m_expTargets->m_gaussians[n_targt].m_weight /
-                                                     mahalanobis<2>(m_measTargets->m_gaussians[n_meas - 1].m_mean.block(0, 0, m_dimMeasures, 1),
-                                                                    m_expMeasure[n_targt].block(0, 0, m_dimMeasures, 1),
-                                                                    m_expDisp[n_targt].block(0, 0, m_dimMeasures, m_dimMeasures));
+        const auto distance = mahalanobis<2>(m_measTargets->m_gaussians[n_meas - 1].m_mean.block(0, 0, m_dimMeasures, 1),
+                                             m_expMeasure[n_targt].block(0, 0, m_dimMeasures, 1),
+                                             m_expDisp[n_targt].block(0, 0, m_dimMeasures, m_dimMeasures));
+
+        m_currTargets->m_gaussians[index].m_weight = m_pDetection * m_expTargets->m_gaussians[n_targt].m_weight / distance;
 
         m_currTargets->m_gaussians[index].m_mean = m_expTargets->m_gaussians[n_targt].m_mean +
                                                    m_uncertainty[n_targt] * (m_measTargets->m_gaussians[n_meas - 1].m_mean - m_expMeasure[n_targt]);
@@ -530,73 +463,17 @@ private:
   Matrix<float, S, S> m_obsCov;
 
   // Temporary matrices, used for the update process
-  vector<MatrixXf, aligned_allocator<MatrixXf>> m_covariance;
-  vector<MatrixXf, aligned_allocator<MatrixXf>> m_expMeasure;
-  vector<MatrixXf, aligned_allocator<MatrixXf>> m_expDisp;
-  vector<MatrixXf, aligned_allocator<MatrixXf>> m_uncertainty;
+  vector<Matrix<float, S, S>> m_covariance;
+  vector<Matrix<float, S, 1>> m_expMeasure;
+  vector<Matrix<float, S, S>> m_expDisp;
+  vector<Matrix<float, S, S>> m_uncertainty;
 
-  std::unique_ptr<GaussianMixture> m_birthModel;
+  std::unique_ptr<GaussianMixture<S>> m_birthModel;
 
-  std::unique_ptr<GaussianMixture> m_birthTargets;
-  std::unique_ptr<GaussianMixture> m_currTargets;
-  std::unique_ptr<GaussianMixture> m_expTargets;
-  std::unique_ptr<GaussianMixture> m_extractedTargets;
-  std::unique_ptr<GaussianMixture> m_measTargets;
-  std::unique_ptr<GaussianMixture> m_spawnTargets;
-
-private:
-  template <size_t D>
-  float mahalanobis(const Matrix<float, D, 1> &point,
-                    const Matrix<float, D, 1> &mean,
-                    const Matrix<float, D, D> &cov)
-  {
-    int ps = point.rows();
-    Matrix<float, D, 1> x_cen = point - mean;
-    Matrix<float, D, D> b = Matrix<float, D, D>::Identity();
-
-    // TODO: Ben - cov needs to be normalized !
-    cov.ldlt().solveInPlace(b);
-    x_cen = b * x_cen;
-    return (x_cen.transpose() * x_cen).sum(); // FIXME / looks a bit fishy
-  }
-
-  template <size_t D>
-  float gaussDensity(const Matrix<float, D, 1> &point,
-                     const Matrix<float, D, 1> &mean,
-                     const Matrix<float, D, D> &cov) const
-  {
-    float det, res;
-
-    Matrix<float, D, D> cov_inverse;
-    Matrix<float, D, 1> mismatch;
-
-    det = cov.determinant();
-    cov_inverse = cov.inverse();
-
-    mismatch = point - mean;
-
-    Matrix<float, 1, 1> distance = mismatch.transpose() * cov_inverse * mismatch;
-
-    distance /= -2.f;
-
-    // Deal with faulty determinant case
-    if (det == 0.f)
-    {
-      return 0.f;
-    }
-
-    res = 1.f / sqrt(pow(2 * M_PI, D) * fabs(det)) * exp(distance.coeff(0, 0));
-
-    if (isinf(det))
-    {
-      printf("Problem in multivariate gaussian\n distance : %f - det %f\n", distance.coeff(0, 0), det);
-      cout << "Cov \n"
-           << cov << endl
-           << "Cov inverse \n"
-           << cov_inverse << endl;
-      return 0.f;
-    }
-
-    return res;
-  }
+  std::unique_ptr<GaussianMixture<S>> m_birthTargets;
+  std::unique_ptr<GaussianMixture<S>> m_currTargets;
+  std::unique_ptr<GaussianMixture<S>> m_expTargets;
+  std::unique_ptr<GaussianMixture<S>> m_extractedTargets;
+  std::unique_ptr<GaussianMixture<S>> m_measTargets;
+  std::unique_ptr<GaussianMixture<S>> m_spawnTargets;
 };
