@@ -14,6 +14,7 @@
 #include <Eigen/Eigen>
 
 using namespace std;
+using namespace gmphd;
 
 bool isTargetVisible(float probaDetection)
 {
@@ -61,7 +62,7 @@ void initTargetTracking(GMPHD<2> &tracker)
   tracker.isInitialized();
 }
 
-bool display(vector<GMPHD<2>::Target> const &measures, vector<GMPHD<2>::Target> const &filtered, cv::Mat &pict)
+bool display(vector<Target<2>> const &measures, vector<Target<2>> const &filtered, cv::Mat &pict)
 {
   // Display measurement hits
   for (const auto &meas : measures)
@@ -99,7 +100,7 @@ int main()
   initTargetTracking(targetTracker);
 
   // Track the circling targets
-  vector<GMPHD<2>::Target> targetMeas;
+  vector<Target<2>> targetMeas;
   vector<pair<float, float>> previousPoses(n_targets);
 
   Matrix<float, 2, 1> measurements;
