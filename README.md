@@ -3,7 +3,7 @@ gmphd [![Build Status](https://travis-ci.org/blefaudeux/gmphd.svg?branch=master)
 
 What is it ?
 ----------
-A Gaussian-Mixtures Probability Hypothesis Density (GM-PHD) filter for multitarget tracking in a bayesian framework. It allows you to track targets over time, given noisy measurements and missed observations.
+A Gaussian-Mixtures Probability Hypothesis Density (GM-PHD) filter for multitarget tracking in a bayesian framework. It allows you to track targets over time, given noisy measurements and missed observations. It's implemented as an header-only templated library.
 
 What does it depend on ?
 -------------------------
