@@ -4,13 +4,10 @@
 #include "eigen_tools.h"
 #include <list>
 #include <algorithm>
+#include <numeric>
 
 using namespace std;
 using namespace Eigen;
-
-/*!
- * \brief Stupid index structure to help sort gaussian mixtures
- */
 
 template <size_t D>
 struct GaussianModel
@@ -150,13 +147,7 @@ public:
 
     void normalize(float linear_offset)
     {
-        // TODO: std::accumulate or count
-        float sum = 0.f;
-
-        for (auto const &gaussian : m_gaussians)
-        {
-            sum += gaussian.m_weight;
-        }
+        const float sum = std::accumulate(m_gaussians.begin(), m_gaussians.end(), 0.f, [](const GaussianModel<D> & g1, const GaussianModel<D> & g2) {return g1.m_weight + g2.m_weight;});
 
         if ((linear_offset + sum) != 0.f)
         {
@@ -272,10 +263,10 @@ public:
                 diff_vec = m_gaussians[i_ref].m_mean.head(D) -
                            gaussian.m_mean.head(D);
 
-                cov_inverse = (m_gaussians[i_ref].m_cov.topLeftCorner(3, 3)).inverse();
+                cov_inverse = (m_gaussians[i_ref].m_cov.topLeftCorner(D, D)).inverse();
 
                 gauss_distance = diff_vec.transpose() *
-                                 cov_inverse.topLeftCorner(3, 3) *
+                                 cov_inverse.topLeftCorner(D, D) *
                                  diff_vec;
 
                 // Add to the set of close gaussians, if below threshold

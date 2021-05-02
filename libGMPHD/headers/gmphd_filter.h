@@ -112,13 +112,13 @@ namespace gmphd
     // Output
     vector<Target<D>> getTrackedTargets(float const &extract_thld)
     {
-      // TODO: Rewrite in modern C++
+     // Get through every target, keep the ones whose weight is above threshold
+      float const thld = std::max(extract_thld, 0.f);
+      m_extractedTargets->m_gaussians.clear();
+      std::copy_if(begin(m_currTargets->m_gaussians), end(m_currTargets->m_gaussians), std::back_inserter(m_extractedTargets->m_gaussians), [&thld](const GaussianModel<S> &gaussian) { return gaussian.m_weight >= thld; });
 
       // Fill in "extracted_targets" from the "current_targets"
-      extractTargets(extract_thld);
-
       vector<Target<D>> targets;
-
       for (auto const &gaussian : m_extractedTargets->m_gaussians)
       {
         targets.push_back({.position = gaussian.m_mean.head(m_dimMeasures), .speed = gaussian.m_mean.tail(m_dimMeasures), .weight = gaussian.m_weight});
@@ -199,7 +199,7 @@ namespace gmphd
       // Predict new targets (spawns):
       predictBirth();
 
-      // Predict propagation of expected targets :
+      // Predict propagation of expected targets
       predictTargets();
 
       // Build the update components
@@ -282,23 +282,6 @@ namespace gmphd
       }
     }
 
-    void extractTargets(float threshold)
-    {
-      // TODO: rewrite in modern C++
-
-      float const thld = std::max(threshold, 0.f);
-
-      // Get trough every target, keep the ones whose weight is above threshold
-      m_extractedTargets->m_gaussians.clear();
-
-      for (auto const &current_target : m_currTargets->m_gaussians)
-      {
-        if (current_target.m_weight >= thld)
-        {
-          m_extractedTargets->m_gaussians.push_back(current_target);
-        }
-      }
-    }
 
     void predictBirth()
     {
