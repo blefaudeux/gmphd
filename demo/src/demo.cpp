@@ -6,11 +6,11 @@
  * but you get the point
  */
 
-#include "gmphd_filter.h"
+#include <gmphd_filter.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-#include "opencv2/imgcodecs.hpp"
+#include <opencv2/imgcodecs.hpp>
 #include <Eigen/Eigen>
 
 using namespace std;
