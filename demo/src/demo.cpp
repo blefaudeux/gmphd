@@ -11,9 +11,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <Eigen/Eigen>
 
-using namespace std;
 using namespace gmphd;
 
 bool isTargetVisible(float probaDetection)
@@ -49,11 +47,12 @@ void initTargetTracking(GMPHD<2> &tracker)
                               measBackground);
 
   // Pruning parameters
-  tracker.setPruningParameters(0.3f, 3.f, 10);
+  tracker.setPruningParameters(0.1f, 3.f, 10);
 
-  // // Spawn (target apparition)
-  // SpawningModel<1> spawnModel;
-  // tracker.setSpawnModel({spawnModel});
+  // Spawn (target apparition)
+  SpawningModel<4> spawnModel;
+  std::vector<SpawningModel<4>> spawns = {spawnModel};
+  tracker.setSpawnModel(spawns);
 
   // Survival over time
   tracker.setSurvivalProbability(0.95f);
@@ -62,7 +61,7 @@ void initTargetTracking(GMPHD<2> &tracker)
   tracker.isInitialized();
 }
 
-bool display(vector<Target<2>> const &measures, vector<Target<2>> const &filtered, cv::Mat &pict)
+bool display(std::vector<Target<2>> const &measures, std::vector<Target<2>> const &filtered, cv::Mat &pict)
 {
   // Display measurement hits
   for (const auto &meas : measures)
@@ -78,7 +77,6 @@ bool display(vector<Target<2>> const &measures, vector<Target<2>> const &filtere
                cv::Scalar(200, 0, 200), 2);
   }
 
-  printf("-----------------------------------------------------------------\n");
   cv::imshow("Filtering results", pict);
 
   int const k = cv::waitKey(100);
@@ -100,8 +98,8 @@ int main()
   initTargetTracking(targetTracker);
 
   // Track the circling targets
-  vector<Target<2>> targetMeas;
-  vector<pair<float, float>> previousPoses(n_targets);
+  std::vector<Target<2>> targetMeas;
+  std::vector<pair<float, float>> previousPoses(n_targets);
 
   Matrix<float, 2, 1> measurements;
   float const detectionProbability = 0.5f;
