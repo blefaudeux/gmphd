@@ -180,7 +180,7 @@ namespace gmphd
             }
         }
 
-        void prune(float trunc_threshold, float merge_threshold, unsigned int max_gaussians)
+        void prune(float trunc_threshold, float merge_threshold, uint max_gaussians)
         {
             // Sort the gaussians mixture, ascending order
             sort();

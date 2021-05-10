@@ -56,9 +56,6 @@ void initTargetTracking(GMPHD<2> &tracker)
 
   // Survival over time
   tracker.setSurvivalProbability(0.95f);
-
-  // (useless : check that the tracker is properly initialized)
-  tracker.isInitialized();
 }
 
 bool display(std::vector<Target<2>> const &measures, std::vector<Target<2>> const &filtered, cv::Mat &pict)

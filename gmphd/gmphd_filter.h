@@ -42,11 +42,9 @@ namespace gmphd
     static const size_t S = D * 2;
 
   public:
-    GMPHD(int max_gaussians, bool verbose = false) : m_maxGaussians(max_gaussians), m_bVerbose(verbose)
+    GMPHD(int max_gaussians) : m_maxGaussians(max_gaussians)
 
     {
-      m_dimMeasures = D;
-      m_dimState = 2 * m_dimMeasures;
       m_pruneTruncThld = 0.f;
       m_pDetection = 0.f;
       m_pSurvival = 0.f;
@@ -58,29 +56,6 @@ namespace gmphd
       m_expTargets.reset(new GaussianMixture<S>());
       m_extractedTargets.reset(new GaussianMixture<S>());
       m_spawnTargets.reset(new GaussianMixture<S>());
-    }
-
-    bool isInitialized()
-    {
-      if (m_tgtDynTrans.cols() != m_dimState)
-      {
-        printf("[GMPHD] - Motion model not set\n");
-        return false;
-      }
-
-      if (m_pruneTruncThld <= 0.f)
-      {
-        printf("[GMPHD] - Pruning parameters not set\n");
-        return false;
-      }
-
-      if (m_pDetection <= 0.f || m_pSurvival <= 0.f)
-      {
-        printf("[GMPHD] - Observation model not set\n");
-        return false;
-      }
-
-      return true;
     }
 
     // Input: raw measurements and possible ref change
@@ -99,8 +74,8 @@ namespace gmphd
       {
         // Create new gaussian model according to measurement
         GaussianModel<S> new_obs;
-        new_obs.m_mean.head(m_dimMeasures) = meas.position;
-        new_obs.m_mean.tail(m_dimMeasures) = meas.speed;
+        new_obs.m_mean.template head<D>() = meas.position;
+        new_obs.m_mean.template tail<D>() = meas.speed;
         new_obs.m_cov = m_obsCov;
         new_obs.m_weight = meas.weight;
 
@@ -120,7 +95,7 @@ namespace gmphd
       std::vector<Target<D>> targets;
       for (auto const &gaussian : m_extractedTargets->m_gaussians)
       {
-        targets.push_back({.position = gaussian.m_mean.head(m_dimMeasures), .speed = gaussian.m_mean.tail(m_dimMeasures), .weight = gaussian.m_weight});
+        targets.push_back({.position = gaussian.m_mean.template head<D>(), .speed = gaussian.m_mean.template tail<D>(), .weight = gaussian.m_weight});
       }
       return targets;
     }
@@ -134,9 +109,9 @@ namespace gmphd
       // Fill in propagation matrix :
       m_tgtDynTrans.setIdentity();
 
-      for (unsigned int i = 0; i < m_dimMeasures; ++i)
+      for (uint i = 0; i < D; ++i)
       {
-        m_tgtDynTrans(i, m_dimMeasures + i) = m_samplingPeriod;
+        m_tgtDynTrans(i, D + i) = m_samplingPeriod;
       }
 
       // Fill in covariance matrix
@@ -144,15 +119,15 @@ namespace gmphd
       m_tgtDynCov = processNoise * processNoise * Matrix<float, S, S>::Identity();
     }
 
-    void setDynamicsModel(MatrixXf const &tgt_dyn_transitions, MatrixXf const &tgt_dyn_covariance)
+    void setDynamicsModel(MatrixXf const &tgtDynTransitions, MatrixXf const &tgtDynCovariance)
     {
-      m_tgtDynTrans = tgt_dyn_transitions;
-      m_tgtDynCov = tgt_dyn_covariance;
+      m_tgtDynTrans = tgtDynTransitions;
+      m_tgtDynCov = tgtDynCovariance;
     }
 
-    void setSurvivalProbability(float _prob_survival)
+    void setSurvivalProbability(float prob_survival)
     {
-      m_pSurvival = _prob_survival;
+      m_pSurvival = prob_survival;
     }
 
     void setObservationModel(float probDetectionOverall, float measNoisePose,
@@ -168,9 +143,8 @@ namespace gmphd
       m_obsMatT = m_obsMat.transpose();
       m_obsCov.setIdentity();
 
-      // FIXME: deal with the _motion_model parameter !
-      m_obsCov.block(0, 0, m_dimMeasures, m_dimMeasures) *= m_measNoisePose * m_measNoisePose;
-      m_obsCov.block(m_dimMeasures, m_dimMeasures, m_dimMeasures, m_dimMeasures) *= m_measNoiseSpeed * m_measNoiseSpeed;
+      m_obsCov.template topLeftCorner<D, D>() *= m_measNoisePose * m_measNoisePose;
+      m_obsCov.template bottomRightCorner<D, D>() *= m_measNoiseSpeed * m_measNoiseSpeed;
     }
 
     void setPruningParameters(float prune_trunc_thld, float prune_merge_thld,
@@ -392,11 +366,8 @@ namespace gmphd
 
   private:
     bool m_motionModel;
-    bool m_bVerbose;
 
     uint m_maxGaussians;
-    uint m_dimMeasures;
-    uint m_dimState;
     uint m_nPredTargets;
     uint m_nCurrentTargets;
     uint m_nMaxPrune;
